@@ -2585,23 +2585,23 @@ Share your run! #HustleTrail #0to1
         if self.qa_current_question and self.qa_question_index < QA_QUESTIONS_PER_ROUND:
             q = self.qa_current_question
             card_y = 100
-            card_h = 300
+            card_h = 165
             pygame.draw.rect(screen, (0, 0, 0, 200), (40, card_y, WIDTH - 80, card_h))
-            pygame.draw.rect(screen, CYAN, (40, card_y, WIDTH - 80, card_h), 3)
+            pygame.draw.rect(screen, CYAN, (40, card_y, WIDTH - 80, card_h), 2)
 
             # Per-question timer bar
             q_progress = max(0, self.qa_question_timer / QA_QUESTION_DURATION)
             q_bar_color = WHITE if q_progress > 0.4 else YELLOW if q_progress > 0.2 else RED
-            pygame.draw.rect(screen, GRAY, (60, card_y + 10, WIDTH - 120, 10), 1)
-            pygame.draw.rect(screen, q_bar_color, (61, card_y + 11, int((WIDTH - 122) * q_progress), 8))
+            pygame.draw.rect(screen, GRAY, (60, card_y + 5, WIDTH - 120, 8), 1)
+            pygame.draw.rect(screen, q_bar_color, (61, card_y + 6, int((WIDTH - 122) * q_progress), 6))
 
-            # Question text (word wrap)
+            # Question text (word wrap - compact)
             words = q["question"].split()
             lines = []
             current_line = ""
             for word in words:
                 test = (current_line + " " + word).strip()
-                if len(test) > 55:
+                if len(test) > 75:
                     if current_line:
                         lines.append(current_line)
                     current_line = word
@@ -2610,11 +2610,11 @@ Share your run! #HustleTrail #0to1
             if current_line:
                 lines.append(current_line)
 
-            for i, line in enumerate(lines[:3]):
-                screen.blit(font.render(line, True, WHITE), (60, card_y + 30 + i * 24))
+            for i, line in enumerate(lines[:2]):
+                screen.blit(small_font.render(line, True, WHITE), (60, card_y + 16 + i * 16))
 
-            # Answer options (graduated rewards, no wrong answer)
-            choice_y = card_y + 110
+            # Answer options (graduated rewards, compact)
+            choice_y = card_y + 52
             rewards = q.get("runway_rewards", [15, 10, 7, 4])
             options = q.get("options", q.get("choices", []))
             for i, option in enumerate(options):
@@ -2625,7 +2625,10 @@ Share your run! #HustleTrail #0to1
                         color = GRAY
                 else:
                     color = WHITE
-                screen.blit(font.render(f"[{i+1}] {option}", True, color), (70, choice_y + i * 35))
+                label = f"[{i+1}] {option}"
+                if len(label) > 65:
+                    label = label[:62] + "..."
+                screen.blit(small_font.render(label, True, color), (55, choice_y + i * 24))
 
             # Result feedback
             if self.qa_result_text:
@@ -2637,12 +2640,12 @@ Share your run! #HustleTrail #0to1
                     result_color = RED
                 else:
                     result_color = YELLOW
-                result_surf = font.render(self.qa_result_text, True, result_color)
-                screen.blit(result_surf, (WIDTH // 2 - result_surf.get_width() // 2, card_y + card_h - 40))
+                result_surf = small_font.render(self.qa_result_text, True, result_color)
+                screen.blit(result_surf, (WIDTH // 2 - result_surf.get_width() // 2, card_y + card_h - 18))
 
             if not self.qa_answered:
                 inst = small_font.render("Press 1-4 to answer!", True, YELLOW)
-                screen.blit(inst, (WIDTH // 2 - inst.get_width() // 2, card_y + card_h - 25))
+                screen.blit(inst, (WIDTH // 2 - inst.get_width() // 2, card_y + card_h - 14))
 
         # Draw score popups on top of everything
         for popup in self.qa_score_popups:
@@ -3346,34 +3349,34 @@ Share your run! #HustleTrail #0to1
     def get_touch_buttons(self):
         """Return list of virtual button defs for the current game state"""
         btns = []
-        BW, BH = 80, 55  # standard button size
-        SBW = 60  # small button width
-        PAD = 8
+        BW, BH = 110, 70  # standard button size (bigger for mobile)
+        SBW = 85  # small button width
+        PAD = 10
         BOT = HEIGHT - BH - PAD  # bottom row Y
         BOT2 = BOT - BH - PAD    # second from bottom
 
         if self.state == 0:
             # Title screen
-            btns.append({"rect": pygame.Rect(WIDTH//2 - 80, HEIGHT//2 + 40, 160, 60),
+            btns.append({"rect": pygame.Rect(WIDTH//2 - 100, HEIGHT//2 + 40, 200, 70),
                          "label": "START", "action": "space", "color": GREEN})
             if getattr(self, 'has_saved_profile', False):
-                btns.append({"rect": pygame.Rect(WIDTH - 110, PAD, 100, 40),
+                btns.append({"rect": pygame.Rect(WIDTH - 130, PAD, 120, 50),
                              "label": "RESET", "action": "n", "color": RED})
 
         elif self.state == -1:
             # Onboarding
             if self.onboarding_step < 3:
-                btns.append({"rect": pygame.Rect(WIDTH//2 - 60, HEIGHT - 70, 120, 50),
+                btns.append({"rect": pygame.Rect(WIDTH//2 - 75, HEIGHT - 85, 150, 65),
                              "label": "NEXT", "action": "return", "color": GREEN})
             elif self.onboarding_step in (3, 4):
-                btns.append({"rect": pygame.Rect(WIDTH//2 - 130, HEIGHT - 70, 120, 50),
+                btns.append({"rect": pygame.Rect(WIDTH//2 - 155, HEIGHT - 85, 145, 65),
                              "label": "YES", "action": "y", "color": GREEN})
-                btns.append({"rect": pygame.Rect(WIDTH//2 + 10, HEIGHT - 70, 120, 50),
+                btns.append({"rect": pygame.Rect(WIDTH//2 + 10, HEIGHT - 85, 145, 65),
                              "label": "NO", "action": "n", "color": RED})
             elif self.onboarding_step == 5:
-                btns.append({"rect": pygame.Rect(WIDTH//2 - 130, HEIGHT - 70, 120, 50),
+                btns.append({"rect": pygame.Rect(WIDTH//2 - 155, HEIGHT - 85, 145, 65),
                              "label": "BOOT", "action": "1", "color": ORANGE})
-                btns.append({"rect": pygame.Rect(WIDTH//2 + 10, HEIGHT - 70, 120, 50),
+                btns.append({"rect": pygame.Rect(WIDTH//2 + 10, HEIGHT - 85, 145, 65),
                              "label": "VC FUND", "action": "2", "color": CYAN})
 
         elif self.state == 1:
@@ -3382,29 +3385,31 @@ Share your run! #HustleTrail #0to1
                 if self.current_event == 'tweet' and hasattr(self, 'tweet_mobile_choices'):
                     # Mobile tweet: show 3 choice buttons
                     for i in range(3):
-                        btns.append({"rect": pygame.Rect(50, 300 + i * 50, WIDTH - 100, 40),
+                        btns.append({"rect": pygame.Rect(40, 280 + i * 65, WIDTH - 80, 55),
                                      "label": f"{i+1}", "action": str(i + 1), "color": CYAN})
                 elif self.current_event == 'hotdog':
                     # Hot dog: 2 big buttons
-                    btns.append({"rect": pygame.Rect(50, BOT, WIDTH//2 - 60, BH),
+                    btns.append({"rect": pygame.Rect(PAD, BOT, WIDTH//2 - PAD * 2, BH),
                                  "label": "HOT DOG", "action": "1", "color": GREEN})
-                    btns.append({"rect": pygame.Rect(WIDTH//2 + 10, BOT, WIDTH//2 - 60, BH),
+                    btns.append({"rect": pygame.Rect(WIDTH//2 + PAD, BOT, WIDTH//2 - PAD * 2, BH),
                                  "label": "NOT HOT DOG", "action": "2", "color": RED})
                 elif self.current_event == 'yc_lottery':
-                    btns.append({"rect": pygame.Rect(50, BOT, WIDTH//2 - 60, BH),
+                    btns.append({"rect": pygame.Rect(PAD, BOT, WIDTH//2 - PAD * 2, BH),
                                  "label": "CHECK", "action": "1", "color": CYAN})
-                    btns.append({"rect": pygame.Rect(WIDTH//2 + 10, BOT, WIDTH//2 - 60, BH),
+                    btns.append({"rect": pygame.Rect(WIDTH//2 + PAD, BOT, WIDTH//2 - PAD * 2, BH),
                                  "label": "KEEP BUILDING", "action": "2", "color": GREEN})
                 else:
                     # Generic event: up to 4 choice buttons
                     n_opts = len(getattr(self, 'event_options', [])) or 4
-                    for i in range(min(n_opts, 4)):
-                        btns.append({"rect": pygame.Rect(50 + i * (BW + PAD), BOT, BW, BH),
+                    n = min(n_opts, 4)
+                    bw = (WIDTH - PAD * 2 - (n - 1) * PAD) // n
+                    for i in range(n):
+                        btns.append({"rect": pygame.Rect(PAD + i * (bw + PAD), BOT, bw, BH),
                                      "label": str(i + 1), "action": str(i + 1), "color": CYAN})
             elif self.remedy_active and self.remedy_timer == 0:
                 for i in range(5):
-                    bw = (WIDTH - 60 - 4 * PAD) // 5
-                    btns.append({"rect": pygame.Rect(10 + i * (bw + PAD), BOT, bw, BH),
+                    bw = (WIDTH - PAD * 2 - 4 * PAD) // 5
+                    btns.append({"rect": pygame.Rect(PAD + i * (bw + PAD), BOT, bw, BH),
                                  "label": str(i + 1), "action": str(i + 1), "color": ORANGE})
             else:
                 # Normal trail: pace + hunt + pause
@@ -3425,40 +3430,40 @@ Share your run! #HustleTrail #0to1
                          "label": ">", "action": "right", "color": CYAN})
             if not self.qa_answered and self.qa_result_timer == 0 and self.round_transition_timer == 0:
                 for i in range(4):
-                    bw = (WIDTH - 100 - 3 * PAD) // 4
-                    btns.append({"rect": pygame.Rect(50 + i * (bw + PAD), 405, bw, 45),
+                    bw = (WIDTH - PAD * 2 - 3 * PAD) // 4
+                    btns.append({"rect": pygame.Rect(PAD + i * (bw + PAD), BOT2, bw, 60),
                                  "label": str(i + 1), "action": str(i + 1), "color": YELLOW})
 
         elif self.state == 3:
             # Hunt: d-pad + fire + exit
-            cx, cy = 90, BOT - 20  # d-pad center
-            ds = 55  # d-pad button size
-            btns.append({"rect": pygame.Rect(cx - ds//2, cy - ds - 5, ds, ds),
+            cx, cy = 110, BOT - 30  # d-pad center
+            ds = 70  # d-pad button size (bigger for mobile)
+            btns.append({"rect": pygame.Rect(cx - ds//2, cy - ds - 6, ds, ds),
                          "label": "^", "action": "up", "color": CYAN})
-            btns.append({"rect": pygame.Rect(cx - ds - 5, cy, ds, ds),
+            btns.append({"rect": pygame.Rect(cx - ds - 6, cy, ds, ds),
                          "label": "<", "action": "left", "color": CYAN})
-            btns.append({"rect": pygame.Rect(cx + 5, cy, ds, ds),
+            btns.append({"rect": pygame.Rect(cx + 6, cy, ds, ds),
                          "label": ">", "action": "right", "color": CYAN})
-            btns.append({"rect": pygame.Rect(cx - ds//2, cy + ds + 5, ds, ds),
+            btns.append({"rect": pygame.Rect(cx - ds//2, cy + ds + 6, ds, ds),
                          "label": "v", "action": "down", "color": CYAN})
-            btns.append({"rect": pygame.Rect(WIDTH - 100, BOT, 90, BH),
+            btns.append({"rect": pygame.Rect(WIDTH - BW - PAD, BOT, BW, BH),
                          "label": "FIRE", "action": "space", "color": RED})
-            btns.append({"rect": pygame.Rect(WIDTH - 80, PAD, 70, 35),
+            btns.append({"rect": pygame.Rect(WIDTH - 100, PAD, 90, 45),
                          "label": "EXIT", "action": "escape", "color": GRAY})
 
         elif self.state == 11:
             # Cycle arcade
             if self.bonus_type == 'frogger':
                 # Frogger: full d-pad
-                cx, cy = 90, BOT - 20
-                ds = 55
-                btns.append({"rect": pygame.Rect(cx - ds//2, cy - ds - 5, ds, ds),
+                cx, cy = 110, BOT - 30
+                ds = 70
+                btns.append({"rect": pygame.Rect(cx - ds//2, cy - ds - 6, ds, ds),
                              "label": "^", "action": "up", "color": CYAN})
-                btns.append({"rect": pygame.Rect(cx - ds - 5, cy, ds, ds),
+                btns.append({"rect": pygame.Rect(cx - ds - 6, cy, ds, ds),
                              "label": "<", "action": "left", "color": CYAN})
-                btns.append({"rect": pygame.Rect(cx + 5, cy, ds, ds),
+                btns.append({"rect": pygame.Rect(cx + 6, cy, ds, ds),
                              "label": ">", "action": "right", "color": CYAN})
-                btns.append({"rect": pygame.Rect(cx - ds//2, cy + ds + 5, ds, ds),
+                btns.append({"rect": pygame.Rect(cx - ds//2, cy + ds + 6, ds, ds),
                              "label": "v", "action": "down", "color": CYAN})
             else:
                 # Galaga/Boss/Mario: left/right only
@@ -3467,23 +3472,23 @@ Share your run! #HustleTrail #0to1
                 btns.append({"rect": pygame.Rect(PAD + BW + PAD, BOT, BW, BH),
                              "label": ">", "action": "right", "color": CYAN})
                 if self.bonus_type in ('galaga', 'boss'):
-                    btns.append({"rect": pygame.Rect(WIDTH - 100, BOT, 90, BH),
+                    btns.append({"rect": pygame.Rect(WIDTH - BW - PAD, BOT, BW, BH),
                                  "label": "FIRE", "action": "space", "color": RED})
                 elif self.bonus_type == 'mario':
-                    btns.append({"rect": pygame.Rect(WIDTH - 100, BOT, 90, BH),
+                    btns.append({"rect": pygame.Rect(WIDTH - BW - PAD, BOT, BW, BH),
                                  "label": "JUMP", "action": "up", "color": GREEN})
-            btns.append({"rect": pygame.Rect(WIDTH - 80, PAD, 70, 35),
+            btns.append({"rect": pygame.Rect(WIDTH - 100, PAD, 90, 45),
                          "label": "EXIT", "action": "escape", "color": GRAY})
 
         elif self.state == 2:
             # Final bonus
             if self.bonus_type == 'galaga':
-                btns.append({"rect": pygame.Rect(WIDTH//2 - 45, BOT, 90, BH),
+                btns.append({"rect": pygame.Rect(WIDTH//2 - 55, BOT, BW, BH),
                              "label": "FIRE", "action": "space", "color": RED})
 
         elif self.state in (5, 6):
             # Win / Lose
-            btns.append({"rect": pygame.Rect(WIDTH//2 - 80, HEIGHT//2 + 80, 160, 60),
+            btns.append({"rect": pygame.Rect(WIDTH//2 - 100, HEIGHT//2 + 80, 200, 70),
                          "label": "RESTART", "action": "space", "color": GREEN})
 
         return btns
@@ -3545,7 +3550,7 @@ Share your run! #HustleTrail #0to1
         for btn in self.touch_buttons:
             r = btn["rect"]
             label = btn["label"]
-            txt = small_font.render(label, True, WHITE)
+            txt = font.render(label, True, WHITE)
             screen.blit(txt, (r.centerx - txt.get_width() // 2,
                               r.centery - txt.get_height() // 2))
 

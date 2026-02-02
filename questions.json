@@ -1,0 +1,167 @@
+[
+  {
+    "id": 1,
+    "question": "Runway burning fast. First hire as founder? (Hormozi-style first hire polls)",
+    "options": [
+      "A) Part-time expert freelancer (+15 - efficient, low commitment)",
+      "B) Full-time junior dev (+10 - quick internal build)",
+      "C) Outsource MVP to agency (+7 - fast launch, hands-off)",
+      "D) Build it yourself first (+4 - zero burn, learn fast)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  },
+  {
+    "id": 2,
+    "question": "3 startup ideas. Which to pick? (Hormozi 'choose the one' framework)",
+    "options": [
+      "A) Solve known hard problem (+15 - defensible moat)",
+      "B) Solve unknown problem (+10 - high PMF upside)",
+      "C) Execute better than others (+7 - speed advantage)",
+      "D) Copy proven model (+4 - lower risk validation)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  },
+  {
+    "id": 3,
+    "question": "Boom or gloom market to launch? (Andrew Chen market timing threads)",
+    "options": [
+      "A) Gloom: Less competition (+15 - easier to stand out)",
+      "B) Boom: Easy funding & talent (+10 - momentum)",
+      "C) Gloom: Build strong fundamentals (+7 - antifragile)",
+      "D) Boom: Fast user validation (+4 - quick feedback)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  },
+  {
+    "id": 4,
+    "question": "$1000 MRR. How to report ARR? (Eric Bahn dodgy ARR tweets)",
+    "options": [
+      "A) Conservative: $120k ARR (+15 - credibility)",
+      "B) Realistic projection: $300k ARR (+10 - optimistic but defensible)",
+      "C) Aggressive: $1M ARR (+7 - investor excitement)",
+      "D) Hype viral: $9M ARR runway story (+4 - buzz, high risk)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  },
+  {
+    "id": 5,
+    "question": "AI cofounder skill mix? (Kyle's X poll on AI cofounder)",
+    "options": [
+      "A) Product + Tech: Ship MVP fast (+15 - execution)",
+      "B) Marketing + Sales: Monetize quickly (+10 - revenue)",
+      "C) Product + Marketing: Acquire users (+7 - growth)",
+      "D) All three spread thin (+4 - balanced but slow)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  },
+  {
+    "id": 6,
+    "question": "Decision paralysis killing momentum? (Jynro founder pain #1)",
+    "options": [
+      "A) Kill 90% of ideas, focus on 3 (+15 - ruthless focus)",
+      "B) Prioritize by highest ROI (+10 - data-driven)",
+      "C) Team vote + gut check (+7 - alignment)",
+      "D) Test all small-scale (+4 - learn by doing)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  },
+  {
+    "id": 7,
+    "question": "Observe a local business. Best way to 10x it? (Nick Huber style)",
+    "options": [
+      "A) Cut costs 20-30% (+15 - instant margin)",
+      "B) Add one high-margin revenue stream (+10 - growth)",
+      "C) Optimize staff & ops (+7 - efficiency)",
+      "D) Renegotiate rent/suppliers (+4 - quick wins)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  },
+  {
+    "id": 8,
+    "question": "Big hairy vision or small knowable idea? (Jon Lai / Paul Graham debate)",
+    "options": [
+      "A) Ambitious long-term vision (+15 - attracts talent/VC)",
+      "B) Small wedge into big market (+10 - PMF first)",
+      "C) Knowable small problem (+7 - fast validation)",
+      "D) Scale small idea later (+4 - low risk)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  },
+  {
+    "id": 9,
+    "question": "Elon-level productivity secret? (pmarca X threads)",
+    "options": [
+      "A) Long hours + ruthless focus (+15 - output max)",
+      "B) Delegate everything non-core (+10 - leverage)",
+      "C) Hire only A-players (+7 - team strength)",
+      "D) Work-life balance & recharge (+4 - sustainability)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  },
+  {
+    "id": 10,
+    "question": "VC meeting: Best way to avoid monologue? (Eric Bahn advice)",
+    "options": [
+      "A) Ask questions first, listen 80% (+15 - build rapport)",
+      "B) Pitch tight 5-min version (+10 - respect time)",
+      "C) Lead with metrics & traction (+7 - proof)",
+      "D) Share story & vision (+4 - emotional hook)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  },
+  {
+    "id": 11,
+    "question": "SaaS pricing strategy? (Jason Lemkin benchmarks)",
+    "options": [
+      "A) Value-based (tied to ROI) (+15 - highest growth)",
+      "B) Hybrid sub + usage (+10 - flexible)",
+      "C) Tiered with clear upgrades (+7 - predictable)",
+      "D) Freemium + progressive paid (+4 - PLG growth)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  },
+  {
+    "id": 12,
+    "question": "Churn spiking. Best first fix? (SaaS metrics threads)",
+    "options": [
+      "A) Improve onboarding + first value (+15 - retention)",
+      "B) Add success manager touchpoints (+10 - high-touch)",
+      "C) Price increase on renewals (+7 - revenue)",
+      "D) Feature requests backlog (+4 - long-term)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  },
+  {
+    "id": 13,
+    "question": "Raising pre-seed. Best deck slide? (Eric Bahn deck rants)",
+    "options": [
+      "A) TAM + problem size first (+15 - big vision)",
+      "B) Traction / early metrics (+10 - proof)",
+      "C) Team & why you (+7 - founder-market fit)",
+      "D) Product demo + screenshots (+4 - show don't tell)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  },
+  {
+    "id": 14,
+    "question": "Product stuck. Best next step? (Paul Graham essays)",
+    "options": [
+      "A) Talk to users daily (+15 - real feedback)",
+      "B) Ship small features fast (+10 - momentum)",
+      "C) Rewrite tech debt (+7 - future speed)",
+      "D) Pivot slightly (+4 - new direction)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  },
+  {
+    "id": 15,
+    "question": "Sales cycle too long? (Jason Lemkin advice)",
+    "options": [
+      "A) Target smaller companies first (+15 - faster closes)",
+      "B) Build self-serve onboarding (+10 - PLG layer)",
+      "C) Add case studies & proof (+7 - trust)",
+      "D) Discounts for annual (+4 - cash upfront)"
+    ],
+    "runway_rewards": [15, 10, 7, 4]
+  }
+]

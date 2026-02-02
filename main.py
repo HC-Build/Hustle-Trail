@@ -392,6 +392,15 @@ class Game:
         self.round_transition_timer = 0
         self.round_transition_text = ""
 
+        # ── Touch / Mobile controls ──
+        self.is_touch = False           # True after first FINGERDOWN
+        self.touch_left = False
+        self.touch_right = False
+        self.touch_up = False
+        self.touch_down = False
+        self.touch_buttons = []         # current frame's button defs
+        self.touch_active_btn = None    # currently-held button action
+
         # Load saved profile
         self.load_profile()
 
@@ -556,13 +565,13 @@ class Game:
         
         keys = pygame.key.get_pressed()
         move_speed = 8
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+        if keys[pygame.K_LEFT] or keys[pygame.K_a] or self.touch_left:
             self.hunt_crosshair_x = max(20, self.hunt_crosshair_x - move_speed)
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d] or self.touch_right:
             self.hunt_crosshair_x = min(WIDTH - 20, self.hunt_crosshair_x + move_speed)
-        if keys[pygame.K_UP] or keys[pygame.K_w]:
+        if keys[pygame.K_UP] or keys[pygame.K_w] or self.touch_up:
             self.hunt_crosshair_y = max(80, self.hunt_crosshair_y - move_speed)
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+        if keys[pygame.K_DOWN] or keys[pygame.K_s] or self.touch_down:
             self.hunt_crosshair_y = min(HEIGHT - 20, self.hunt_crosshair_y + move_speed)
         
         self.hunt_spawn_timer += 1
@@ -1234,9 +1243,9 @@ class Game:
     
     def update_bonus_galaga(self):
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_a] and self.player_x > 25:
+        if (keys[pygame.K_a] or self.touch_left) and self.player_x > 25:
             self.player_x -= 5
-        if keys[pygame.K_d] and self.player_x < WIDTH - 25:
+        if (keys[pygame.K_d] or self.touch_right) and self.player_x < WIDTH - 25:
             self.player_x += 5
         self.player_rect.center = (self.player_x, self.player_y)
         
@@ -1276,13 +1285,13 @@ class Game:
     
     def update_bonus_mario(self):
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_a]:
+        if keys[pygame.K_a] or self.touch_left:
             self.scroll_x += 3
             self.player_x = max(50, self.player_x - 2)
-        if keys[pygame.K_d]:
+        if keys[pygame.K_d] or self.touch_right:
             self.scroll_x -= 5
             self.player_x = min(WIDTH - 50, self.player_x + 2)
-        if keys[pygame.K_w] and self.player_y > HEIGHT - 200:
+        if (keys[pygame.K_w] or self.touch_up) and self.player_y > HEIGHT - 200:
             self.player_y -= 8
         else:
             self.player_y = min(HEIGHT - 80, self.player_y + 3)
@@ -1295,13 +1304,13 @@ class Game:
     
     def update_bonus_frogger(self):
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_a] and self.player_x > 25:
+        if (keys[pygame.K_a] or self.touch_left) and self.player_x > 25:
             self.player_x -= 5
-        if keys[pygame.K_d] and self.player_x < WIDTH - 25:
+        if (keys[pygame.K_d] or self.touch_right) and self.player_x < WIDTH - 25:
             self.player_x += 5
-        if keys[pygame.K_w] and self.player_y > 50:
+        if (keys[pygame.K_w] or self.touch_up) and self.player_y > 50:
             self.player_y -= 5
-        if keys[pygame.K_s] and self.player_y < HEIGHT - 50:
+        if (keys[pygame.K_s] or self.touch_down) and self.player_y < HEIGHT - 50:
             self.player_y += 5
         
         self.player_rect.center = (self.player_x, self.player_y)
@@ -1568,9 +1577,9 @@ Share your run! #HustleTrail #0to1
 
         # Player movement
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+        if keys[pygame.K_a] or keys[pygame.K_LEFT] or self.touch_left:
             self.player_x = max(25, self.player_x - 6)
-        if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+        if keys[pygame.K_d] or keys[pygame.K_RIGHT] or self.touch_right:
             self.player_x = min(WIDTH - 25, self.player_x + 6)
         self.player_rect.center = (self.player_x, self.player_y)
 
@@ -1721,11 +1730,27 @@ Share your run! #HustleTrail #0to1
         self.tweet_input = ""
         self.tweet_timer = 5 * 60  # 5 seconds to type
         self.tweet_done = False
-        self.event_text = f"TWEET FOR TRACTION!\nType: \"{self.tweet_target}\""
-        self.event_options = [
-            "Type it correctly in 5 seconds!",
-            "30% chance auto-correct mangles it anyway...",
-        ]
+
+        if self.is_touch:
+            # Mobile: multiple-choice instead of typing
+            self.tweet_mobile_choices = True
+            # Build 3 options: correct + mangled + a random other mangled
+            other_pairs = [p for p in self.TWEET_PROMPTS if p[0] != self.tweet_target]
+            decoy = random.choice(other_pairs)[1] if other_pairs else "lorem ipsum startup"
+            self.tweet_options = [self.tweet_target, self.tweet_mangled, decoy]
+            random.shuffle(self.tweet_options)
+            self.tweet_correct_idx = self.tweet_options.index(self.tweet_target)
+            self.event_text = "TWEET FOR TRACTION!\nWhich tweet is correct?"
+            self.event_options = [
+                f"{i+1}: \"{opt}\"" for i, opt in enumerate(self.tweet_options)
+            ]
+        else:
+            self.tweet_mobile_choices = False
+            self.event_text = f"TWEET FOR TRACTION!\nType: \"{self.tweet_target}\""
+            self.event_options = [
+                "Type it correctly in 5 seconds!",
+                "30% chance auto-correct mangles it anyway...",
+            ]
         self.log("Tweet time! Type fast, founder!")
 
     def update_tweet_event(self):
@@ -1789,6 +1814,41 @@ Share your run! #HustleTrail #0to1
             self._resolve_tweet(timed_out=False)
         elif event.unicode and len(self.tweet_input) < 50:
             self.tweet_input += event.unicode
+
+    def _handle_tweet_mobile_choice(self, choice):
+        """Handle mobile multiple-choice tweet selection"""
+        if self.tweet_done:
+            return
+        self.tweet_done = True
+        idx = choice - 1
+        if idx == getattr(self, 'tweet_correct_idx', -1):
+            # Picked correct tweet — same 30% auto-correct risk
+            if random.random() < 0.30:
+                self.runway = max(0, self.runway - 5)
+                self.traction += 5
+                self.event_result = (
+                    f"Auto-correct struck! Sent: \"{self.tweet_mangled}\"\n"
+                    "Went viral for wrong reasons. -5 runway, +5 traction"
+                )
+                play_sound(SFX_DAMAGE)
+            else:
+                self.traction += 20
+                self.runway = min(100, self.runway + 5)
+                self.event_result = (
+                    "Tweet nailed! Viral boost!\n"
+                    "+20 traction, +5 runway"
+                )
+                play_sound(SFX_POWERUP)
+        else:
+            self.runway = max(0, self.runway - 5)
+            self.event_result = (
+                f"Wrong tweet! Sent the mangled version.\n"
+                "VCs confused. -5 runway"
+            )
+            play_sound(SFX_DAMAGE)
+        self.event_result_timer = 240
+        self.current_event = None
+        self.log(self.event_result.split('\n')[0][:50])
 
     def draw_tweet_overlay(self):
         """Draw the tweet typing minigame overlay"""
@@ -2447,9 +2507,9 @@ Share your run! #HustleTrail #0to1
 
         # Wagon movement (continuous key reading)
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+        if keys[pygame.K_LEFT] or keys[pygame.K_a] or self.touch_left:
             self.qa_wagon_x = max(50, self.qa_wagon_x - 5)
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d] or self.touch_right:
             self.qa_wagon_x = min(WIDTH - 50, self.qa_wagon_x + 5)
 
         # If showing result feedback, count down
@@ -2806,13 +2866,23 @@ Share your run! #HustleTrail #0to1
             y += 50
         
         if self.onboarding_step < 3:
-            cursor = "|" if pygame.time.get_ticks() % 1000 < 500 else ""
-            screen.blit(font.render(self.input_text + cursor, True, GREEN), (400, 120 + self.onboarding_step * 50))
+            mobile_defaults = ["Disrupt.ai", "Everything is broken", "AI fixes it (somehow)"]
+            if self.is_touch and not self.input_text:
+                # Show placeholder on mobile
+                screen.blit(font.render(mobile_defaults[self.onboarding_step], True, GRAY), (400, 120 + self.onboarding_step * 50))
+                screen.blit(small_font.render("Tap NEXT to accept", True, YELLOW), (400, 120 + self.onboarding_step * 50 + 25))
+            else:
+                cursor = "|" if pygame.time.get_ticks() % 1000 < 500 else ""
+                screen.blit(font.render(self.input_text + cursor, True, GREEN), (400, 120 + self.onboarding_step * 50))
         elif self.onboarding_step in (3, 4):
-            screen.blit(font.render("Press Y / N", True, YELLOW), (60, y + 10))
+            if self.is_touch:
+                pass  # Y/N buttons drawn by touch UI
+            else:
+                screen.blit(font.render("Press Y / N", True, YELLOW), (60, y + 10))
         elif self.onboarding_step == 5:
-            screen.blit(font.render("1 → Bootstrap (secret ending)", True, GREEN), (80, y + 10))
-            screen.blit(font.render("2 → Seek VC Funding (start the trail!)", True, CYAN), (80, y + 45))
+            if not self.is_touch:
+                screen.blit(font.render("1 → Bootstrap (secret ending)", True, GREEN), (80, y + 10))
+                screen.blit(font.render("2 → Seek VC Funding (start the trail!)", True, CYAN), (80, y + 45))
     
     def draw_title(self):
         title = big_font.render("HUSTLE TRAIL", True, YELLOW)
@@ -3061,12 +3131,16 @@ Share your run! #HustleTrail #0to1
                 if key == pygame.K_BACKSPACE:
                     self.input_text = self.input_text[:-1]
                 elif key == pygame.K_RETURN:
+                    mobile_defaults = ["Disrupt.ai", "Everything is broken", "AI fixes it (somehow)"]
                     if self.onboarding_step == 0:
-                        self.company_name = self.input_text.strip() or "Unnamed Startup"
+                        fallback = mobile_defaults[0] if self.is_touch else "Unnamed Startup"
+                        self.company_name = self.input_text.strip() or fallback
                     elif self.onboarding_step == 1:
-                        self.problem = self.input_text.strip() or "Everything is broken"
+                        fallback = mobile_defaults[1] if self.is_touch else "Everything is broken"
+                        self.problem = self.input_text.strip() or fallback
                     elif self.onboarding_step == 2:
-                        self.solution = self.input_text.strip() or "AI-powered solution"
+                        fallback = mobile_defaults[2] if self.is_touch else "AI-powered solution"
+                        self.solution = self.input_text.strip() or fallback
                     self.input_text = ""
                     self.onboarding_step += 1
                     if self.onboarding_step >= 3:
@@ -3142,7 +3216,10 @@ Share your run! #HustleTrail #0to1
             
             if self.current_event:
                 if self.current_event == 'tweet':
-                    self.handle_tweet_keypress(event)
+                    if getattr(self, 'tweet_mobile_choices', False) and key in (pygame.K_1, pygame.K_2, pygame.K_3):
+                        self._handle_tweet_mobile_choice(int(pygame.key.name(key)))
+                    else:
+                        self.handle_tweet_keypress(event)
                 elif key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4):
                     choice = int(pygame.key.name(key))
                     if self.current_event == 'river':
@@ -3204,6 +3281,274 @@ Share your run! #HustleTrail #0to1
             if key == pygame.K_SPACE:
                 self.__init__()
 
+    # ══════════════════════════════════════════════════════════════════
+    # TOUCH / MOBILE CONTROLS
+    # ══════════════════════════════════════════════════════════════════
+
+    def handle_touch_event(self, event):
+        """Handle FINGERDOWN / FINGERUP / FINGERMOTION for mobile play"""
+        # First touch ever → enable touch UI
+        if not self.is_touch:
+            self.is_touch = True
+
+        # Convert normalized 0-1 coords to screen pixels
+        tx = int(event.x * WIDTH)
+        ty = int(event.y * HEIGHT)
+
+        if event.type == pygame.FINGERUP:
+            self.touch_left = False
+            self.touch_right = False
+            self.touch_up = False
+            self.touch_down = False
+            self.touch_active_btn = None
+            return
+
+        # Build current buttons (needed for hit testing)
+        self.touch_buttons = self.get_touch_buttons()
+
+        hit_action = None
+        for btn in self.touch_buttons:
+            if btn["rect"].collidepoint(tx, ty):
+                hit_action = btn["action"]
+                break
+
+        if event.type == pygame.FINGERDOWN:
+            # Clear directional flags first
+            self.touch_left = False
+            self.touch_right = False
+            self.touch_up = False
+            self.touch_down = False
+
+            if hit_action:
+                self.touch_active_btn = hit_action
+                if hit_action == "left":
+                    self.touch_left = True
+                elif hit_action == "right":
+                    self.touch_right = True
+                elif hit_action == "up":
+                    self.touch_up = True
+                elif hit_action == "down":
+                    self.touch_down = True
+                else:
+                    # Non-directional action → execute immediately
+                    self._execute_touch_action(hit_action)
+            else:
+                self.touch_active_btn = None
+
+        elif event.type == pygame.FINGERMOTION:
+            # Update directional holds as finger drags
+            self.touch_left = (hit_action == "left")
+            self.touch_right = (hit_action == "right")
+            self.touch_up = (hit_action == "up")
+            self.touch_down = (hit_action == "down")
+            self.touch_active_btn = hit_action
+
+    def get_touch_buttons(self):
+        """Return list of virtual button defs for the current game state"""
+        btns = []
+        BW, BH = 80, 55  # standard button size
+        SBW = 60  # small button width
+        PAD = 8
+        BOT = HEIGHT - BH - PAD  # bottom row Y
+        BOT2 = BOT - BH - PAD    # second from bottom
+
+        if self.state == 0:
+            # Title screen
+            btns.append({"rect": pygame.Rect(WIDTH//2 - 80, HEIGHT//2 + 40, 160, 60),
+                         "label": "START", "action": "space", "color": GREEN})
+            if getattr(self, 'has_saved_profile', False):
+                btns.append({"rect": pygame.Rect(WIDTH - 110, PAD, 100, 40),
+                             "label": "RESET", "action": "n", "color": RED})
+
+        elif self.state == -1:
+            # Onboarding
+            if self.onboarding_step < 3:
+                btns.append({"rect": pygame.Rect(WIDTH//2 - 60, HEIGHT - 70, 120, 50),
+                             "label": "NEXT", "action": "return", "color": GREEN})
+            elif self.onboarding_step in (3, 4):
+                btns.append({"rect": pygame.Rect(WIDTH//2 - 130, HEIGHT - 70, 120, 50),
+                             "label": "YES", "action": "y", "color": GREEN})
+                btns.append({"rect": pygame.Rect(WIDTH//2 + 10, HEIGHT - 70, 120, 50),
+                             "label": "NO", "action": "n", "color": RED})
+            elif self.onboarding_step == 5:
+                btns.append({"rect": pygame.Rect(WIDTH//2 - 130, HEIGHT - 70, 120, 50),
+                             "label": "BOOT", "action": "1", "color": ORANGE})
+                btns.append({"rect": pygame.Rect(WIDTH//2 + 10, HEIGHT - 70, 120, 50),
+                             "label": "VC FUND", "action": "2", "color": CYAN})
+
+        elif self.state == 1:
+            # Trail - context-dependent
+            if self.current_event:
+                if self.current_event == 'tweet' and hasattr(self, 'tweet_mobile_choices'):
+                    # Mobile tweet: show 3 choice buttons
+                    for i in range(3):
+                        btns.append({"rect": pygame.Rect(50, 300 + i * 50, WIDTH - 100, 40),
+                                     "label": f"{i+1}", "action": str(i + 1), "color": CYAN})
+                elif self.current_event == 'hotdog':
+                    # Hot dog: 2 big buttons
+                    btns.append({"rect": pygame.Rect(50, BOT, WIDTH//2 - 60, BH),
+                                 "label": "HOT DOG", "action": "1", "color": GREEN})
+                    btns.append({"rect": pygame.Rect(WIDTH//2 + 10, BOT, WIDTH//2 - 60, BH),
+                                 "label": "NOT HOT DOG", "action": "2", "color": RED})
+                elif self.current_event == 'yc_lottery':
+                    btns.append({"rect": pygame.Rect(50, BOT, WIDTH//2 - 60, BH),
+                                 "label": "CHECK", "action": "1", "color": CYAN})
+                    btns.append({"rect": pygame.Rect(WIDTH//2 + 10, BOT, WIDTH//2 - 60, BH),
+                                 "label": "KEEP BUILDING", "action": "2", "color": GREEN})
+                else:
+                    # Generic event: up to 4 choice buttons
+                    n_opts = len(getattr(self, 'event_options', [])) or 4
+                    for i in range(min(n_opts, 4)):
+                        btns.append({"rect": pygame.Rect(50 + i * (BW + PAD), BOT, BW, BH),
+                                     "label": str(i + 1), "action": str(i + 1), "color": CYAN})
+            elif self.remedy_active and self.remedy_timer == 0:
+                for i in range(5):
+                    bw = (WIDTH - 60 - 4 * PAD) // 5
+                    btns.append({"rect": pygame.Rect(10 + i * (bw + PAD), BOT, bw, BH),
+                                 "label": str(i + 1), "action": str(i + 1), "color": ORANGE})
+            else:
+                # Normal trail: pace + hunt + pause
+                for i in range(3):
+                    btns.append({"rect": pygame.Rect(10 + i * (SBW + PAD), BOT, SBW, BH),
+                                 "label": ["SLOW", "MED", "FAST"][i], "action": str(i + 1),
+                                 "color": [GREEN, YELLOW, RED][i]})
+                btns.append({"rect": pygame.Rect(WIDTH - BW - PAD, BOT, BW, BH),
+                             "label": "HUNT", "action": "hunt", "color": ORANGE})
+                btns.append({"rect": pygame.Rect(WIDTH - BW - PAD, BOT2, BW, BH),
+                             "label": "PAUSE", "action": "pause", "color": GRAY})
+
+        elif self.state == 10:
+            # Q&A: directional + answer buttons
+            btns.append({"rect": pygame.Rect(PAD, BOT, BW, BH),
+                         "label": "<", "action": "left", "color": CYAN})
+            btns.append({"rect": pygame.Rect(PAD + BW + PAD, BOT, BW, BH),
+                         "label": ">", "action": "right", "color": CYAN})
+            if not self.qa_answered and self.qa_result_timer == 0 and self.round_transition_timer == 0:
+                for i in range(4):
+                    bw = (WIDTH - 100 - 3 * PAD) // 4
+                    btns.append({"rect": pygame.Rect(50 + i * (bw + PAD), 405, bw, 45),
+                                 "label": str(i + 1), "action": str(i + 1), "color": YELLOW})
+
+        elif self.state == 3:
+            # Hunt: d-pad + fire + exit
+            cx, cy = 90, BOT - 20  # d-pad center
+            ds = 55  # d-pad button size
+            btns.append({"rect": pygame.Rect(cx - ds//2, cy - ds - 5, ds, ds),
+                         "label": "^", "action": "up", "color": CYAN})
+            btns.append({"rect": pygame.Rect(cx - ds - 5, cy, ds, ds),
+                         "label": "<", "action": "left", "color": CYAN})
+            btns.append({"rect": pygame.Rect(cx + 5, cy, ds, ds),
+                         "label": ">", "action": "right", "color": CYAN})
+            btns.append({"rect": pygame.Rect(cx - ds//2, cy + ds + 5, ds, ds),
+                         "label": "v", "action": "down", "color": CYAN})
+            btns.append({"rect": pygame.Rect(WIDTH - 100, BOT, 90, BH),
+                         "label": "FIRE", "action": "space", "color": RED})
+            btns.append({"rect": pygame.Rect(WIDTH - 80, PAD, 70, 35),
+                         "label": "EXIT", "action": "escape", "color": GRAY})
+
+        elif self.state == 11:
+            # Cycle arcade
+            if self.bonus_type == 'frogger':
+                # Frogger: full d-pad
+                cx, cy = 90, BOT - 20
+                ds = 55
+                btns.append({"rect": pygame.Rect(cx - ds//2, cy - ds - 5, ds, ds),
+                             "label": "^", "action": "up", "color": CYAN})
+                btns.append({"rect": pygame.Rect(cx - ds - 5, cy, ds, ds),
+                             "label": "<", "action": "left", "color": CYAN})
+                btns.append({"rect": pygame.Rect(cx + 5, cy, ds, ds),
+                             "label": ">", "action": "right", "color": CYAN})
+                btns.append({"rect": pygame.Rect(cx - ds//2, cy + ds + 5, ds, ds),
+                             "label": "v", "action": "down", "color": CYAN})
+            else:
+                # Galaga/Boss/Mario: left/right only
+                btns.append({"rect": pygame.Rect(PAD, BOT, BW, BH),
+                             "label": "<", "action": "left", "color": CYAN})
+                btns.append({"rect": pygame.Rect(PAD + BW + PAD, BOT, BW, BH),
+                             "label": ">", "action": "right", "color": CYAN})
+                if self.bonus_type in ('galaga', 'boss'):
+                    btns.append({"rect": pygame.Rect(WIDTH - 100, BOT, 90, BH),
+                                 "label": "FIRE", "action": "space", "color": RED})
+                elif self.bonus_type == 'mario':
+                    btns.append({"rect": pygame.Rect(WIDTH - 100, BOT, 90, BH),
+                                 "label": "JUMP", "action": "up", "color": GREEN})
+            btns.append({"rect": pygame.Rect(WIDTH - 80, PAD, 70, 35),
+                         "label": "EXIT", "action": "escape", "color": GRAY})
+
+        elif self.state == 2:
+            # Final bonus
+            if self.bonus_type == 'galaga':
+                btns.append({"rect": pygame.Rect(WIDTH//2 - 45, BOT, 90, BH),
+                             "label": "FIRE", "action": "space", "color": RED})
+
+        elif self.state in (5, 6):
+            # Win / Lose
+            btns.append({"rect": pygame.Rect(WIDTH//2 - 80, HEIGHT//2 + 80, 160, 60),
+                         "label": "RESTART", "action": "space", "color": GREEN})
+
+        return btns
+
+    def _execute_touch_action(self, action):
+        """Execute a non-directional touch action (mirrors keyboard input)"""
+        # Map action to a synthetic key for handle_event
+        key_map = {
+            "1": pygame.K_1, "2": pygame.K_2, "3": pygame.K_3,
+            "4": pygame.K_4, "5": pygame.K_5,
+            "space": pygame.K_SPACE, "escape": pygame.K_ESCAPE,
+            "y": pygame.K_y, "n": pygame.K_n,
+            "return": pygame.K_RETURN,
+        }
+
+        if action == "hunt":
+            # Direct: trigger hunt without going through handle_event
+            if self.state == 1 and not self.current_event and not self.remedy_active and not self.paused:
+                if self.distance - self.hunt_distance_trigger > 300:
+                    self.start_hunt()
+            return
+
+        if action == "pause":
+            if self.state == 1 and not self.current_event and not self.remedy_active:
+                self.paused = True
+                self.pause_timer = 25 * 60
+            return
+
+        if action in key_map:
+            # Create a synthetic KEYDOWN event and pass to handle_event
+            synth = pygame.event.Event(pygame.KEYDOWN, key=key_map[action], unicode=action, mod=0)
+            self.handle_event(synth)
+
+    def draw_touch_ui(self):
+        """Draw semi-transparent virtual buttons over the game"""
+        if not self.is_touch:
+            return
+
+        self.touch_buttons = self.get_touch_buttons()
+
+        # Create a transparent surface for button backgrounds
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+
+        for btn in self.touch_buttons:
+            r = btn["rect"]
+            c = btn["color"]
+            is_active = (btn["action"] == self.touch_active_btn)
+
+            # Background: semi-transparent, brighter when active
+            alpha = 180 if is_active else 100
+            pygame.draw.rect(overlay, (c[0], c[1], c[2], alpha), r, border_radius=8)
+            # Border
+            border_color = WHITE if is_active else (c[0], c[1], c[2], 220)
+            pygame.draw.rect(overlay, border_color, r, 2, border_radius=8)
+
+        screen.blit(overlay, (0, 0))
+
+        # Draw labels on top (not transparent)
+        for btn in self.touch_buttons:
+            r = btn["rect"]
+            label = btn["label"]
+            txt = small_font.render(label, True, WHITE)
+            screen.blit(txt, (r.centerx - txt.get_width() // 2,
+                              r.centery - txt.get_height() // 2))
+
 
 # ══════════════════════════════════════════════════════════════════════
 # MAIN LOOP
@@ -3217,10 +3562,15 @@ async def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            game.handle_event(event)
-        
+            elif event.type in (pygame.FINGERDOWN, pygame.FINGERUP, pygame.FINGERMOTION):
+                game.handle_touch_event(event)
+            else:
+                game.handle_event(event)
+
         game.update()
         game.draw()
+        if game.is_touch:
+            game.draw_touch_ui()
         pygame.display.flip()
         clock.tick(60)
         await asyncio.sleep(0)

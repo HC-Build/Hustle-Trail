@@ -62,7 +62,7 @@ async def custom_site():
     import embed
 
 
-    platform.document.body.style.background = "#7f7f7f"
+    platform.document.body.style.background = "#000000"
 
     import pygame
 
@@ -287,26 +287,32 @@ config = {
         /* average size of droid screen 470dp x 320dp  */
         canvas.emscripten {
             border: 0px none;
-            background-color: transparent;
-            width: 100%;
-            height: 100%;
+            background-color: #000;
+            width: 100vw !important;
+            height: 100vh !important;
             z-index: 5;
-
             padding: 0;
-            margin: 0 auto;
-
-            position: absolute;
+            margin: 0;
+            position: fixed;
             top: 0;
-            bottom: 0;
             left: 0;
-            right: 0;
+            object-fit: fill;
+            touch-action: none;
         }
 
         body {
             font-family: arial;
             margin: 0;
-            padding: none;
-            background-color:powderblue;
+            padding: 0;
+            background-color: #000;
+            overflow: hidden;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            position: fixed;
+            width: 100%;
+            height: 100%;
         }
 
         .topright{

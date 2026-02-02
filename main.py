@@ -96,6 +96,7 @@ MAGENTA = (255, 0, 255)
 ORANGE = (255, 165, 0)
 GRAY = (150, 150, 150)
 DARK_BLUE = (10, 15, 40)
+WOOD = (139, 90, 43)
 
 # ── Q&A Timing Constants ──
 QA_PHASE_DURATION = 20 * 60       # 20 seconds in frames at 60fps
@@ -138,6 +139,88 @@ QA_FALLING_TYPES = [
     {"name": "Bad Press", "emoji": "!", "good": False, "points": -3, "color": MAGENTA, "speed": 4},
     {"name": "Burn Rate", "emoji": "B", "good": False, "points": -6, "color": RED, "speed": 2},
 ]
+
+
+def draw_lowrider_wagon(scr, wagon_x, wagon_y, runway_pct=100, wheel_angle=0, bounce_offset=0):
+    """Lowrider covered wagon with gold wire rims, candy paint + flames"""
+    CANDY_RED = (200, 0, 0)
+    FLAME_ORANGE = (255, 140, 0)
+    FLAME_YELLOW = (255, 255, 0)
+    GOLD = (255, 215, 0)
+    GOLD_TINT = (200, 160, 0) if runway_pct < 50 else GOLD
+    CHROME = (220, 220, 220)
+    OX_BROWN = (139, 69, 19)
+    bo = int(bounce_offset)
+
+    wheel_r = 20
+    wby = wagon_y + 38
+    fwc = (wagon_x + 32, wby + bo)
+    bwc = (wagon_x + 108, wby + bo)
+
+    def draw_rim(cx, cy, angle):
+        pygame.draw.circle(scr, CHROME, (cx, cy), wheel_r + 2, 2)
+        pygame.draw.circle(scr, GOLD_TINT, (cx, cy), wheel_r)
+        pygame.draw.circle(scr, BLACK, (cx, cy), wheel_r - 3)
+        for i in range(24):
+            sa = angle + i * (math.pi / 12)
+            ex = cx + int((wheel_r - 4) * math.cos(sa))
+            ey = cy + int((wheel_r - 4) * math.sin(sa))
+            pygame.draw.line(scr, GOLD_TINT, (cx, cy), (ex, ey), 2)
+        pygame.draw.circle(scr, CHROME, (cx, cy), 8)
+        pygame.draw.circle(scr, GOLD, (cx, cy), 6)
+        pygame.draw.circle(scr, (255, 255, 200), (cx, cy), wheel_r - 1, 1)
+
+    draw_rim(fwc[0], fwc[1], wheel_angle)
+    draw_rim(bwc[0], bwc[1], wheel_angle + math.pi / 3)
+    pygame.draw.line(scr, CHROME, fwc, bwc, 4)
+
+    # Wagon body - candy red + flame murals
+    bby = wagon_y + 18
+    bed = [(wagon_x + 8, bby + 10 + bo), (wagon_x + 8, bby + bo),
+           (wagon_x + 132, bby + bo), (wagon_x + 132, bby + 10 + bo)]
+    pygame.draw.polygon(scr, CANDY_RED, bed)
+    pygame.draw.polygon(scr, BLACK, bed, 3)
+
+    fby = bby + 3 + bo
+    for side_off in [0, 100]:
+        fp = [(wagon_x + 20 + side_off, fby), (wagon_x + 40 + side_off, fby - 12),
+              (wagon_x + 60 + side_off, fby - 5), (wagon_x + 80 + side_off, fby - 15),
+              (wagon_x + 100 + side_off, fby)]
+        pygame.draw.lines(scr, FLAME_ORANGE, False, fp, 4)
+        pygame.draw.lines(scr, FLAME_YELLOW, False, fp, 2)
+
+    # Canvas cover
+    cover = [(wagon_x + 14, bby + bo), (wagon_x + 38, bby - 10 + bo),
+             (wagon_x + 70, bby - 13 + bo), (wagon_x + 102, bby - 10 + bo),
+             (wagon_x + 126, bby + bo)]
+    pygame.draw.polygon(scr, (180, 0, 0), cover)
+    pygame.draw.polygon(scr, BLACK, cover, 2)
+    tf = [(wagon_x + 50, bby - 8 + bo), (wagon_x + 70, bby - 20 + bo),
+          (wagon_x + 90, bby - 8 + bo)]
+    pygame.draw.polygon(scr, FLAME_ORANGE, tf)
+    pygame.draw.polygon(scr, FLAME_YELLOW, tf, 2)
+
+    # "LOW H$" logo
+    logo = small_font.render('LOW H$', True, GOLD)
+    scr.blit(logo, (wagon_x + 50, bby + 2 + bo))
+
+    # Shadow
+    sw = int(4 + abs(bounce_offset) * 0.5)
+    pygame.draw.line(scr, (80, 80, 90), (wagon_x + 10, wagon_y + 48),
+                     (wagon_x + 130, wagon_y + 48), sw)
+
+    # Oxen (gold horns, chrome chains)
+    ox_y = wagon_y + 25 + bo
+    for ox_x, flip in [(wagon_x - 20, -1), (wagon_x + 140, 1)]:
+        pygame.draw.ellipse(scr, OX_BROWN, (ox_x - 14, ox_y - 14, 28, 28))
+        pygame.draw.line(scr, GOLD, (ox_x, ox_y), (ox_x + flip * 15, ox_y - 10), 4)
+        pygame.draw.line(scr, GOLD, (ox_x, ox_y), (ox_x + flip * 15, ox_y + 10), 4)
+        chain_to = wagon_x + 8 if flip == -1 else wagon_x + 132
+        pygame.draw.line(scr, CHROME, (ox_x - flip * 10, ox_y), (chain_to, ox_y), 3)
+
+    # Yoke bar
+    pygame.draw.line(scr, WOOD, (wagon_x + 8, ox_y), (wagon_x + 132, ox_y), 6)
+    pygame.draw.line(scr, BLACK, (wagon_x + 8, ox_y), (wagon_x + 132, ox_y), 2)
 
 
 class Game:
@@ -391,6 +474,10 @@ class Game:
         # Transition pause between QA and trail
         self.round_transition_timer = 0
         self.round_transition_text = ""
+
+        # ── Lowrider wagon animation ──
+        self.wheel_angle = 0.0
+        self.bounce_time = 0.0
 
         # ── Touch / Mobile controls ──
         self.is_touch = False           # True after first FINGERDOWN
@@ -2357,15 +2444,15 @@ Share your run! #HustleTrail #0to1
                 self.qa_score_popups.remove(popup)
 
     def _draw_qa_falling_objects(self):
-        # Draw wagon (player-controlled)
+        # Draw lowrider wagon (player-controlled)
         wx = self.qa_wagon_x
-        pygame.draw.rect(screen, BROWN, (wx - 40, 460, 80, 50))
-        pygame.draw.circle(screen, BLACK, (wx - 20, 510), 15)
-        pygame.draw.circle(screen, BLACK, (wx + 20, 510), 15)
-        # Co-founders on wagon
+        bounce = math.sin(self.bounce_time * 5 * math.pi) * 3
+        draw_lowrider_wagon(screen, wx - 70, 465, self.runway,
+                            self.wheel_angle, bounce)
+        # Co-founders on wagon cover
         alive = [cf for cf in self.co_founders if cf["alive"]]
         for i, cf in enumerate(alive[:3]):
-            pygame.draw.circle(screen, CYAN, (wx - 20 + i * 20, 450), 8)
+            pygame.draw.circle(screen, CYAN, (wx - 30 + i * 20, 473 + int(bounce)), 8)
 
         # Draw falling objects
         for obj in self.qa_falling_objects:
@@ -2657,6 +2744,10 @@ Share your run! #HustleTrail #0to1
     # ══════════════════════════════════════════════════════════════════
 
     def update(self):
+        # Lowrider wagon animation (runs in all states)
+        self.wheel_angle += 0.15
+        self.bounce_time += 1.0 / 60.0
+
         if self.state == 1:
             if self.paused:
                 self.pause_timer -= 1
@@ -2923,16 +3014,15 @@ Share your run! #HustleTrail #0to1
             x = (i * 200 - int(self.distance) % 200)
             pygame.draw.polygon(screen, (60, 60, 80), [(x, 400), (x + 100, 200), (x + 200, 400)])
         
-        # Startup vehicle (auto-moving)
+        # Lowrider startup wagon (auto-moving)
         startup_vehicle_x = 100 + (int(self.distance) % 50)
-        pygame.draw.rect(screen, BROWN, (startup_vehicle_x, 360, 80, 50))
-        pygame.draw.circle(screen, BLACK, (startup_vehicle_x + 20, 410), 15)
-        pygame.draw.circle(screen, BLACK, (startup_vehicle_x + 60, 410), 15)
-        
-        # Co-founders on startup vehicle
+        bounce = math.sin(self.bounce_time * 5 * math.pi) * 4
+        draw_lowrider_wagon(screen, startup_vehicle_x - 30, 370, self.runway,
+                            self.wheel_angle, bounce)
+        # Co-founders on wagon cover
         alive = [cf for cf in self.co_founders if cf["alive"]]
         for i, cf in enumerate(alive[:3]):
-            pygame.draw.circle(screen, CYAN, (startup_vehicle_x + 20 + i * 20, 350), 8)
+            pygame.draw.circle(screen, CYAN, (startup_vehicle_x + 10 + i * 20, 378 + int(bounce)), 8)
         
         pygame.draw.rect(screen, (0, 0, 0, 180), (0, 0, WIDTH, 80))
         

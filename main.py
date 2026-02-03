@@ -128,16 +128,38 @@ def load_questions():
         for i in range(1, 16)
     ]
 
-# ── Falling Object Types for Q&A (good=catch, bad=dodge) ──
-QA_FALLING_TYPES = [
-    {"name": "Angel Check", "emoji": "$", "good": True, "points": 5, "color": GREEN, "speed": 3},
-    {"name": "Term Sheet", "emoji": "T", "good": True, "points": 3, "color": CYAN, "speed": 2.5},
-    {"name": "Viral Post", "emoji": "V", "good": True, "points": 4, "color": YELLOW, "speed": 3.5},
-    {"name": "Customer", "emoji": "C", "good": True, "points": 6, "color": GREEN, "speed": 2},
-    {"name": "Bug Report", "emoji": "X", "good": False, "points": -4, "color": RED, "speed": 3},
-    {"name": "Lawsuit", "emoji": "L", "good": False, "points": -5, "color": RED, "speed": 2.5},
-    {"name": "Bad Press", "emoji": "!", "good": False, "points": -3, "color": MAGENTA, "speed": 4},
-    {"name": "Burn Rate", "emoji": "B", "good": False, "points": -6, "color": RED, "speed": 2},
+# ── Q&A Side-Scrolling Platformer Constants ──
+QA_GROUND_Y = 490           # Ground Y (wagon bottom rests here)
+QA_WAGON_X = 120            # Fixed wagon X position
+QA_WAGON_W = 100            # Collision width
+QA_WAGON_H_STAND = 50       # Standing collision height
+QA_WAGON_H_DUCK = 25        # Ducking collision height
+QA_JUMP_VEL = -12           # Initial jump velocity
+QA_GRAVITY = 0.6            # Gravity per frame
+QA_SCROLL_SPEED = 3         # Base scroll speed
+QA_BULLET_SPEED = 10        # Bullet horizontal speed
+QA_BULLET_COOLDOWN = 20     # Frames between shots
+
+# ── Obstacle Types for Q&A Side-Scroller ──
+# lane: ground (jump over), overhead (duck under), mid (shoot), collect_ground/collect_air (walk/jump into)
+QA_OBSTACLE_TYPES = [
+    # Ground obstacles - JUMP to avoid
+    {"name": "Bug Report", "emoji": "X", "lane": "ground", "points": -5, "color": RED, "w": 40, "h": 35},
+    {"name": "Tech Debt", "emoji": "D", "lane": "ground", "points": -4, "color": MAGENTA, "w": 45, "h": 30},
+    {"name": "Scope Creep", "emoji": "S", "lane": "ground", "points": -6, "color": RED, "w": 50, "h": 40},
+    # Overhead obstacles - DUCK to avoid
+    {"name": "VC Meeting", "emoji": "V", "lane": "overhead", "points": -5, "color": (100, 100, 200), "w": 60, "h": 25},
+    {"name": "Board Meeting", "emoji": "B", "lane": "overhead", "points": -4, "color": (120, 80, 180), "w": 55, "h": 25},
+    {"name": "Investor Call", "emoji": "I", "lane": "overhead", "points": -3, "color": (90, 90, 170), "w": 50, "h": 25},
+    # Mid-level enemies - SHOOT to destroy (hp = hits to kill)
+    {"name": "Server Crash", "emoji": "!", "lane": "mid", "points": -8, "kill_points": 3, "color": RED, "w": 35, "h": 35, "hp": 2},
+    {"name": "Copycat", "emoji": "C", "lane": "mid", "points": -6, "kill_points": 5, "color": ORANGE, "w": 30, "h": 30, "hp": 1},
+    {"name": "Troll Tweet", "emoji": "T", "lane": "mid", "points": -3, "kill_points": 2, "color": MAGENTA, "w": 28, "h": 28, "hp": 1},
+    # Collectibles - walk/jump into for bonus
+    {"name": "Angel Check", "emoji": "$", "lane": "collect_ground", "points": 5, "color": GREEN, "w": 30, "h": 30},
+    {"name": "Customer", "emoji": "+", "lane": "collect_ground", "points": 6, "color": GREEN, "w": 28, "h": 28},
+    {"name": "Viral Post", "emoji": "V", "lane": "collect_air", "points": 4, "color": YELLOW, "w": 28, "h": 28},
+    {"name": "Term Sheet", "emoji": "T", "lane": "collect_air", "points": 8, "color": CYAN, "w": 32, "h": 32},
 ]
 
 
@@ -381,9 +403,9 @@ class Game:
             "Pivoting to AI because VCs stopped calling back.",
             "Our moat is vibes. Unassailable vibes.",
             # Richard Hendricks quotes - awkward genius founder satire
-            "Our network just blew it apart like a prolapsed anus.",
+            "Our middle-out compression just shattered every benchmark.",
             "It's weird. I actually don't know what to do when things are going well. It is not natural.",
-            "You know, you could be a twink. A bear, an otter. A circuit queen, a chub, a pup. A gipster, a daddy chaser, a leatherman, a lady boy.",
+            "I just want to build something beautiful. Is that so wrong?",
             "Look, guys, for thousands of years, guys like us have gotten the s*** kicked out of us.",
             "Jobs was a poser. He didn't even write code.",
             "Whoa, it is, like, 500 degrees in here.",
@@ -456,11 +478,20 @@ class Game:
         self.question_pointer = 0
         self._shuffle_questions()
 
-        # Falling Objects during Q&A
-        self.qa_falling_objects = []     # Active falling objects
-        self.qa_falling_spawn_timer = 0  # Frames until next spawn
-        self.qa_wagon_x = WIDTH // 2     # Player-controlled wagon X
-        self.qa_score_popups = []        # Floating +X/-X text popups
+        # Side-Scrolling Platformer during Q&A
+        self.qa_wagon_y = QA_GROUND_Y       # Wagon Y (changes with jump)
+        self.qa_wagon_vy = 0                # Vertical velocity
+        self.qa_is_jumping = False          # In air?
+        self.qa_is_ducking = False          # Ducking?
+        self.qa_scroll_speed = QA_SCROLL_SPEED  # Current scroll speed
+        self.qa_scroll_x = 0               # Background scroll offset
+        self.qa_obstacles = []              # Active obstacles on screen
+        self.qa_bullets = []                # Active bullets
+        self.qa_bullet_cooldown = 0         # Frames until can shoot again
+        self.qa_obstacle_spawn_timer = 0    # Frames until next obstacle
+        self.qa_spawn_interval = 80         # Starting spawn interval (frames)
+        self.qa_invincible_timer = 0        # I-frames after damage
+        self.qa_score_popups = []           # Floating +X/-X text popups
 
         # Trail Round Phase
         self.trail_round_active = False
@@ -1200,7 +1231,7 @@ class Game:
             ]
         },
         {
-            'text': "MVP launch bombs -- Richard prolapsed anus network.",
+            'text': "MVP launch bombs -- network melts under load.",
             'choices': [
                 {'text': "Hotfix quick (Safe)", 'rating': 'Safe', 'base_runway': 10, 'rng_worse_chance': 20, 'worse_extra': -15, 'worse_effect': "Traction dip"},
                 {'text': "Ignore feedback (Balanced)", 'rating': 'Balanced', 'base_runway': -10, 'rng_worse_chance': 30, 'worse_extra': -10, 'worse_effect': "Churn rise"},
@@ -2392,80 +2423,262 @@ Share your run! #HustleTrail #0to1
         self.qa_result_timer = QA_RESULT_DISPLAY
         play_sound(SFX_DAMAGE)
 
-    # ── Falling Objects during Q&A ──
+    # ── Side-Scrolling Platformer during Q&A ──
 
-    def _spawn_qa_falling_object(self):
-        obj_type = random.choice(QA_FALLING_TYPES)
-        self.qa_falling_objects.append({
-            'x': random.randint(40, WIDTH - 40),
-            'y': -30,
+    def _spawn_qa_obstacle(self):
+        """Spawn an obstacle from the right edge based on lane type"""
+        # Weight selection: more collectibles early, more hazards later
+        weights = []
+        for ot in QA_OBSTACLE_TYPES:
+            if ot['lane'] in ('collect_ground', 'collect_air'):
+                weights.append(2)
+            elif ot['lane'] == 'mid':
+                weights.append(3)
+            else:
+                weights.append(4)
+        obj_type = random.choices(QA_OBSTACLE_TYPES, weights=weights, k=1)[0]
+        lane = obj_type['lane']
+
+        obs = {
             'type': obj_type,
-            'speed': obj_type['speed'] + random.uniform(-0.5, 0.5),
-            'size': 25,
-        })
+            'x': WIDTH + 20,
+            'w': obj_type['w'],
+            'h': obj_type['h'],
+        }
 
-    def _update_qa_falling_objects(self):
-        self.qa_falling_spawn_timer += 1
-        if self.qa_falling_spawn_timer >= 50:
-            self._spawn_qa_falling_object()
-            self.qa_falling_spawn_timer = 0
+        if lane == 'ground':
+            obs['y'] = QA_GROUND_Y - obj_type['h']
+        elif lane == 'overhead':
+            obs['y'] = QA_GROUND_Y - 70
+        elif lane == 'mid':
+            obs['y'] = QA_GROUND_Y - random.randint(40, 80)
+            obs['hp'] = obj_type.get('hp', 1)
+        elif lane == 'collect_ground':
+            obs['y'] = QA_GROUND_Y - obj_type['h']
+        elif lane == 'collect_air':
+            obs['y'] = QA_GROUND_Y - 90
 
-        wagon_rect = pygame.Rect(self.qa_wagon_x - 40, 460, 80, 50)
+        self.qa_obstacles.append(obs)
+        # Decrease spawn interval (difficulty ramp)
+        self.qa_spawn_interval = max(40, self.qa_spawn_interval - 1)
 
-        for obj in self.qa_falling_objects[:]:
-            obj['y'] += obj['speed']
-            obj_rect = pygame.Rect(obj['x'] - obj['size']//2, obj['y'] - obj['size']//2,
-                                   obj['size'], obj['size'])
+    def _update_qa_obstacles(self):
+        """Move obstacles left, handle collisions with wagon and bullets"""
+        # Wagon collision rect (adjusted for jump/duck)
+        wagon_h = QA_WAGON_H_DUCK if self.qa_is_ducking else QA_WAGON_H_STAND
+        wagon_top = self.qa_wagon_y - wagon_h
+        wagon_rect = pygame.Rect(QA_WAGON_X - QA_WAGON_W // 2, wagon_top, QA_WAGON_W, wagon_h)
 
-            if obj_rect.colliderect(wagon_rect):
-                self.qa_falling_objects.remove(obj)
-                pts = obj['type']['points']
-                self.runway = max(0, min(100, self.runway + pts))
-                # Score popup at random position avoiding question card (y:100-400)
-                popup_x = random.choice([random.randint(10, 60), random.randint(WIDTH - 100, WIDTH - 10)])
-                popup_y = random.choice([random.randint(420, 550), random.randint(10, 90)])
-                self.qa_score_popups.append({
-                    'x': popup_x, 'y': popup_y,
-                    'text': f"+{pts}" if pts > 0 else str(pts),
-                    'color': GREEN if pts > 0 else RED,
-                    'timer': 60,
-                })
-                if pts > 0:
+        for obs in self.qa_obstacles[:]:
+            obs['x'] -= self.qa_scroll_speed
+            obs_rect = pygame.Rect(obs['x'], obs['y'], obs['w'], obs['h'])
+            lane = obs['type']['lane']
+
+            # Bullet collisions with mid-lane enemies
+            if lane == 'mid':
+                for bul in self.qa_bullets[:]:
+                    bul_rect = pygame.Rect(bul['x'], bul['y'], 12, 6)
+                    if bul_rect.colliderect(obs_rect):
+                        if bul in self.qa_bullets:
+                            self.qa_bullets.remove(bul)
+                        obs['hp'] -= 1
+                        if obs['hp'] <= 0:
+                            # Killed! Award kill_points
+                            pts = obs['type'].get('kill_points', 2)
+                            self.runway = max(0, min(100, self.runway + pts))
+                            self._qa_popup(obs['x'], obs['y'], pts)
+                            play_sound(SFX_ENEMY_DIE)
+                            if obs in self.qa_obstacles:
+                                self.qa_obstacles.remove(obs)
+                        else:
+                            play_sound(SFX_HUNT_HIT)
+                        break
+
+            # Check if obstacle still exists after bullet hits
+            if obs not in self.qa_obstacles:
+                continue
+
+            # Wagon collision
+            if obs_rect.colliderect(wagon_rect) and self.qa_invincible_timer <= 0:
+                pts = obs['type']['points']
+                if lane in ('collect_ground', 'collect_air'):
+                    # Collectible: always good
+                    self.runway = max(0, min(100, self.runway + pts))
+                    self._qa_popup(obs['x'], obs['y'], pts)
                     play_sound(SFX_POWERUP)
-                else:
+                    if obs in self.qa_obstacles:
+                        self.qa_obstacles.remove(obs)
+                elif lane == 'ground':
+                    # Ground obstacle: only hits if wagon is NOT jumping high enough
+                    if self.qa_wagon_y > QA_GROUND_Y - 30:
+                        self.runway = max(0, min(100, self.runway + pts))
+                        self._qa_popup(obs['x'], obs['y'], pts)
+                        self.qa_invincible_timer = 30
+                        play_sound(SFX_DAMAGE)
+                        if obs in self.qa_obstacles:
+                            self.qa_obstacles.remove(obs)
+                elif lane == 'overhead':
+                    # Overhead: only hits if wagon is NOT ducking
+                    if not self.qa_is_ducking:
+                        self.runway = max(0, min(100, self.runway + pts))
+                        self._qa_popup(obs['x'], obs['y'], pts)
+                        self.qa_invincible_timer = 30
+                        play_sound(SFX_DAMAGE)
+                        if obs in self.qa_obstacles:
+                            self.qa_obstacles.remove(obs)
+                elif lane == 'mid':
+                    # Mid enemy reached wagon
+                    self.runway = max(0, min(100, self.runway + pts))
+                    self._qa_popup(obs['x'], obs['y'], pts)
+                    self.qa_invincible_timer = 30
                     play_sound(SFX_DAMAGE)
-            elif obj['y'] > HEIGHT + 30:
-                self.qa_falling_objects.remove(obj)
+                    if obs in self.qa_obstacles:
+                        self.qa_obstacles.remove(obs)
 
+            # Remove if scrolled off left edge
+            elif obs['x'] + obs['w'] < -20:
+                if obs in self.qa_obstacles:
+                    self.qa_obstacles.remove(obs)
+
+        # Update bullets
+        for bul in self.qa_bullets[:]:
+            bul['x'] += QA_BULLET_SPEED
+            if bul['x'] > WIDTH + 20:
+                self.qa_bullets.remove(bul)
+
+        # Update score popups
         for popup in self.qa_score_popups[:]:
             popup['timer'] -= 1
             popup['y'] -= 0.5
             if popup['timer'] <= 0:
                 self.qa_score_popups.remove(popup)
 
-    def _draw_qa_falling_objects(self):
-        # Draw lowrider wagon (player-controlled)
-        wx = self.qa_wagon_x
-        bounce = math.sin(self.bounce_time * 5 * math.pi) * 3
-        draw_lowrider_wagon(screen, wx - 70, 465, self.runway,
-                            self.wheel_angle, bounce)
-        # Co-founders on wagon cover
-        alive = [cf for cf in self.co_founders if cf["alive"]]
-        for i, cf in enumerate(alive[:3]):
-            pygame.draw.circle(screen, CYAN, (wx - 30 + i * 20, 473 + int(bounce)), 8)
+        # Invincibility countdown
+        if self.qa_invincible_timer > 0:
+            self.qa_invincible_timer -= 1
 
-        # Draw falling objects
-        for obj in self.qa_falling_objects:
-            ot = obj['type']
-            pygame.draw.rect(screen, ot['color'],
-                             (obj['x'] - obj['size']//2, obj['y'] - obj['size']//2,
-                              obj['size'], obj['size']))
+    def _qa_popup(self, x, y, pts):
+        """Add a score popup near the given position"""
+        popup_x = max(10, min(WIDTH - 60, x))
+        popup_y = max(10, min(HEIGHT - 30, y - 20))
+        self.qa_score_popups.append({
+            'x': popup_x, 'y': popup_y,
+            'text': f"+{pts}" if pts > 0 else str(pts),
+            'color': GREEN if pts > 0 else RED,
+            'timer': 60,
+        })
+
+    def _qa_shoot(self):
+        """Fire a bullet from wagon front"""
+        if self.qa_bullet_cooldown > 0:
+            return
+        wagon_h = QA_WAGON_H_DUCK if self.qa_is_ducking else QA_WAGON_H_STAND
+        bullet_y = self.qa_wagon_y - wagon_h // 2
+        self.qa_bullets.append({
+            'x': QA_WAGON_X + QA_WAGON_W // 2,
+            'y': bullet_y,
+        })
+        self.qa_bullet_cooldown = QA_BULLET_COOLDOWN
+        play_sound(SFX_SHOOT)
+
+    def _draw_qa_background(self):
+        """Draw 3-layer parallax scrolling background"""
+        sx = self.qa_scroll_x
+
+        # Sky gradient
+        pygame.draw.rect(screen, (10, 20, 50), (0, 0, WIDTH, QA_GROUND_Y))
+
+        # Far mountains (slow parallax)
+        far_offset = int(sx * 0.3) % 300
+        for i in range(-1, 5):
+            mx = i * 300 - far_offset
+            pygame.draw.polygon(screen, (40, 50, 70),
+                                [(mx, QA_GROUND_Y), (mx + 150, QA_GROUND_Y - 120), (mx + 300, QA_GROUND_Y)])
+
+        # Near hills (medium parallax)
+        near_offset = int(sx * 0.6) % 200
+        for i in range(-1, 7):
+            hx = i * 200 - near_offset
+            pygame.draw.polygon(screen, (30, 60, 30),
+                                [(hx, QA_GROUND_Y), (hx + 100, QA_GROUND_Y - 60), (hx + 200, QA_GROUND_Y)])
+
+        # Ground
+        pygame.draw.rect(screen, (40, 80, 40), (0, QA_GROUND_Y, WIDTH, HEIGHT - QA_GROUND_Y))
+
+        # Road markings (full parallax)
+        road_offset = int(sx) % 80
+        for i in range(-1, 12):
+            rx = i * 80 - road_offset
+            pygame.draw.rect(screen, (80, 80, 60), (rx, QA_GROUND_Y + 5, 40, 4))
+
+    def _draw_qa_scene(self):
+        """Draw the side-scrolling platformer scene (wagon, obstacles, bullets)"""
+        # Draw wagon (lowrider)
+        bounce = math.sin(self.bounce_time * 5 * math.pi) * 3
+        wagon_draw_y = self.qa_wagon_y - 48  # Adjust for wagon sprite height
+        # Flash during invincibility
+        if self.qa_invincible_timer > 0 and self.qa_invincible_timer % 4 < 2:
+            pass  # Skip drawing (flash effect)
+        else:
+            # If ducking, squish the wagon visually
+            if self.qa_is_ducking:
+                draw_lowrider_wagon(screen, QA_WAGON_X - 70, wagon_draw_y + 15, self.runway,
+                                    self.wheel_angle, bounce * 0.5)
+            else:
+                draw_lowrider_wagon(screen, QA_WAGON_X - 70, wagon_draw_y, self.runway,
+                                    self.wheel_angle, bounce)
+            # Co-founders on wagon
+            alive = [cf for cf in self.co_founders if cf["alive"]]
+            for i, cf in enumerate(alive[:3]):
+                cf_y = wagon_draw_y + 8 + (15 if self.qa_is_ducking else 0)
+                pygame.draw.circle(screen, CYAN, (QA_WAGON_X - 30 + i * 20, int(cf_y + bounce)), 8)
+
+        # Draw obstacles
+        for obs in self.qa_obstacles:
+            ot = obs['type']
+            lane = ot['lane']
+            ox, oy, ow, oh = obs['x'], obs['y'], obs['w'], obs['h']
+
+            if lane == 'ground':
+                # Red/magenta blocks on ground
+                pygame.draw.rect(screen, ot['color'], (ox, oy, ow, oh))
+                pygame.draw.rect(screen, WHITE, (ox, oy, ow, oh), 1)
+            elif lane == 'overhead':
+                # Purple/blue bars hanging from above
+                pygame.draw.rect(screen, ot['color'], (ox, oy, ow, oh))
+                pygame.draw.rect(screen, WHITE, (ox, oy, ow, oh), 1)
+                # Hanging lines
+                pygame.draw.line(screen, GRAY, (ox + ow // 4, oy), (ox + ow // 4, oy - 30), 2)
+                pygame.draw.line(screen, GRAY, (ox + 3 * ow // 4, oy), (ox + 3 * ow // 4, oy - 30), 2)
+            elif lane == 'mid':
+                # Enemy with HP indicator
+                pygame.draw.rect(screen, ot['color'], (ox, oy, ow, oh))
+                pygame.draw.rect(screen, WHITE, (ox, oy, ow, oh), 2)
+                # HP dots
+                hp = obs.get('hp', 1)
+                for h in range(hp):
+                    pygame.draw.circle(screen, RED, (ox + ow // 2 + h * 8 - (hp - 1) * 4, oy - 6), 3)
+            elif lane in ('collect_ground', 'collect_air'):
+                # Green/yellow collectible with glow
+                pygame.draw.rect(screen, ot['color'], (ox, oy, ow, oh))
+                pygame.draw.rect(screen, WHITE, (ox, oy, ow, oh), 1)
+                # Sparkle effect
+                sparkle = int(self.bounce_time * 10) % 3
+                if sparkle == 0:
+                    pygame.draw.circle(screen, WHITE, (ox + ow // 2, oy - 4), 2)
+
+            # Label
             label = small_font.render(ot['emoji'], True, WHITE)
-            screen.blit(label, (obj['x'] - label.get_width()//2, obj['y'] - label.get_height()//2))
+            screen.blit(label, (ox + ow // 2 - label.get_width() // 2,
+                                oy + oh // 2 - label.get_height() // 2))
+
+        # Draw bullets
+        for bul in self.qa_bullets:
+            pygame.draw.rect(screen, YELLOW, (bul['x'], bul['y'] - 3, 12, 6))
+            pygame.draw.rect(screen, WHITE, (bul['x'] + 10, bul['y'] - 1, 4, 2))
 
         # Draw score popups
         for popup in self.qa_score_popups:
-            alpha = max(0, min(255, int(255 * popup['timer'] / 60)))
             popup_surf = font.render(popup['text'], True, popup['color'])
             screen.blit(popup_surf, (popup['x'], int(popup['y'])))
 
@@ -2488,9 +2701,19 @@ Share your run! #HustleTrail #0to1
         self.qa_answered = False
         self.qa_result_text = ""
         self.qa_result_timer = 0
-        self.qa_falling_objects = []
-        self.qa_falling_spawn_timer = 0
-        self.qa_wagon_x = WIDTH // 2
+        # Platformer state
+        self.qa_wagon_y = QA_GROUND_Y
+        self.qa_wagon_vy = 0
+        self.qa_is_jumping = False
+        self.qa_is_ducking = False
+        self.qa_scroll_speed = QA_SCROLL_SPEED
+        self.qa_scroll_x = 0
+        self.qa_obstacles = []
+        self.qa_bullets = []
+        self.qa_bullet_cooldown = 0
+        self.qa_obstacle_spawn_timer = 0
+        self.qa_spawn_interval = 80
+        self.qa_invincible_timer = 0
         self.qa_score_popups = []
         self.round_transition_timer = 0
         self._load_next_question()
@@ -2571,7 +2794,7 @@ Share your run! #HustleTrail #0to1
         play_sound(SFX_POWERUP)
 
     def update_qa(self):
-        """Update Q&A phase (state 10)"""
+        """Update Q&A phase (state 10) - side-scrolling platformer"""
         # Handle transition pause
         if self.round_transition_timer > 0:
             self.round_transition_timer -= 1
@@ -2589,15 +2812,43 @@ Share your run! #HustleTrail #0to1
         # Main 20-second timer
         self.qa_timer -= 1
 
-        # Update falling objects
-        self._update_qa_falling_objects()
-
-        # Wagon movement (continuous key reading)
+        # ── Jump / Duck / Gravity physics ──
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] or keys[pygame.K_a] or self.touch_left:
-            self.qa_wagon_x = max(50, self.qa_wagon_x - 5)
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d] or self.touch_right:
-            self.qa_wagon_x = min(WIDTH - 50, self.qa_wagon_x + 5)
+
+        # Jump (only if on ground)
+        if (keys[pygame.K_UP] or keys[pygame.K_w] or self.touch_up) and not self.qa_is_jumping:
+            self.qa_wagon_vy = QA_JUMP_VEL
+            self.qa_is_jumping = True
+
+        # Duck (only on ground)
+        self.qa_is_ducking = (keys[pygame.K_DOWN] or keys[pygame.K_s] or self.touch_down) and not self.qa_is_jumping
+
+        # Apply gravity
+        self.qa_wagon_vy += QA_GRAVITY
+        self.qa_wagon_y += self.qa_wagon_vy
+
+        # Ground collision
+        if self.qa_wagon_y >= QA_GROUND_Y:
+            self.qa_wagon_y = QA_GROUND_Y
+            self.qa_wagon_vy = 0
+            self.qa_is_jumping = False
+
+        # ── Scroll speed ramp ──
+        self.qa_scroll_speed += 0.003
+        self.qa_scroll_x += self.qa_scroll_speed
+
+        # ── Spawn obstacles ──
+        self.qa_obstacle_spawn_timer += 1
+        if self.qa_obstacle_spawn_timer >= self.qa_spawn_interval:
+            self._spawn_qa_obstacle()
+            self.qa_obstacle_spawn_timer = 0
+
+        # ── Bullet cooldown ──
+        if self.qa_bullet_cooldown > 0:
+            self.qa_bullet_cooldown -= 1
+
+        # ── Update obstacles + bullets + collisions ──
+        self._update_qa_obstacles()
 
         # If showing result feedback, count down
         if self.qa_result_timer > 0:
@@ -2621,18 +2872,14 @@ Share your run! #HustleTrail #0to1
             self.end_qa_phase()
 
     def draw_qa(self):
-        """Draw Q&A phase with wagon, falling objects, and question overlay"""
+        """Draw Q&A phase with side-scrolling platformer and question overlay"""
         screen.fill(BLACK)
 
-        # Background: sky + mountains + ground
-        pygame.draw.rect(screen, (10, 30, 60), (0, 0, WIDTH, 430))
-        pygame.draw.rect(screen, (20, 60, 20), (0, 430, WIDTH, 170))
-        for i in range(5):
-            x = (i * 200 - int(self.distance) % 200)
-            pygame.draw.polygon(screen, (60, 60, 80), [(x, 430), (x + 100, 250), (x + 200, 430)])
+        # Parallax scrolling background
+        self._draw_qa_background()
 
-        # Draw falling objects and wagon
-        self._draw_qa_falling_objects()
+        # Draw platformer scene (wagon, obstacles, bullets)
+        self._draw_qa_scene()
 
         # ── Top HUD ──
         pygame.draw.rect(screen, BLACK, (0, 0, WIDTH, 95))
@@ -2654,7 +2901,7 @@ Share your run! #HustleTrail #0to1
         score_color = GREEN if self.qa_round_score >= 0 else RED
         screen.blit(font.render(f"Q Score: {self.qa_round_score:+d}", True, score_color), (400, 55))
         screen.blit(font.render(f"Q {self.qa_question_index + 1}/{QA_QUESTIONS_PER_ROUND}", True, CYAN), (600, 55))
-        screen.blit(small_font.render("A/D: Move wagon | 1-4: Answer", True, ORANGE), (10, 78))
+        screen.blit(small_font.render("JUMP/DUCK/SHOOT + 1-4: Answer", True, ORANGE), (10, 78))
 
         # ── Transition screen ──
         if self.round_transition_timer > 0:
@@ -3340,12 +3587,14 @@ Share your run! #HustleTrail #0to1
                     self.handle_remedy(choice)
         
         elif self.state == 10:
-            # Q&A phase - 1/2/3/4 for answers (wagon movement via held keys in update)
+            # Q&A phase - 1/2/3/4 for answers, SPACE/F to shoot
             if self.round_transition_timer > 0:
                 return
             if key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4):
                 choice = int(pygame.key.name(key)) - 1
                 self._answer_question(choice)
+            elif key in (pygame.K_SPACE, pygame.K_f):
+                self._qa_shoot()
 
         elif self.state == 3:
             if key == pygame.K_SPACE:
@@ -3513,11 +3762,13 @@ Share your run! #HustleTrail #0to1
                              "label": "PAUSE", "action": "pause", "color": GRAY})
 
         elif self.state == 10:
-            # Q&A: directional + answer buttons
+            # Q&A: JUMP / DUCK / SHOOT + answer buttons
             btns.append({"rect": pygame.Rect(PAD, BOT, BW, BH),
-                         "label": "<", "action": "left", "color": CYAN})
+                         "label": "JUMP", "action": "up", "color": GREEN})
             btns.append({"rect": pygame.Rect(PAD + BW + PAD, BOT, BW, BH),
-                         "label": ">", "action": "right", "color": CYAN})
+                         "label": "DUCK", "action": "down", "color": CYAN})
+            btns.append({"rect": pygame.Rect(WIDTH - BW - PAD, BOT, BW, BH),
+                         "label": "SHOOT", "action": "space", "color": RED})
             if not self.qa_answered and self.qa_result_timer == 0 and self.round_transition_timer == 0:
                 for i in range(4):
                     bw = (WIDTH - PAD * 2 - 3 * PAD) // 4

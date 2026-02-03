@@ -3627,6 +3627,50 @@ Share your run! #HustleTrail #0to1
     # TOUCH / MOBILE CONTROLS
     # ══════════════════════════════════════════════════════════════════
 
+    def handle_mouse_as_touch(self, event):
+        """Handle MOUSEBUTTONDOWN/UP as touch events (pygbag compatibility)"""
+        if not self.is_touch:
+            self.is_touch = True
+
+        # Mouse events use .pos (pixel coords), not normalized .x/.y
+        tx, ty = event.pos
+
+        if event.type == pygame.MOUSEBUTTONUP:
+            self.touch_left = False
+            self.touch_right = False
+            self.touch_up = False
+            self.touch_down = False
+            self.touch_active_btn = None
+            return
+
+        # MOUSEBUTTONDOWN → same logic as FINGERDOWN
+        self.touch_buttons = self.get_touch_buttons()
+        hit_action = None
+        for btn in self.touch_buttons:
+            if btn["rect"].collidepoint(tx, ty):
+                hit_action = btn["action"]
+                break
+
+        self.touch_left = False
+        self.touch_right = False
+        self.touch_up = False
+        self.touch_down = False
+
+        if hit_action:
+            self.touch_active_btn = hit_action
+            if hit_action == "left":
+                self.touch_left = True
+            elif hit_action == "right":
+                self.touch_right = True
+            elif hit_action == "up":
+                self.touch_up = True
+            elif hit_action == "down":
+                self.touch_down = True
+            else:
+                self._execute_touch_action(hit_action)
+        else:
+            self.touch_active_btn = None
+
     def handle_touch_event(self, event):
         """Handle FINGERDOWN / FINGERUP / FINGERMOTION for mobile play"""
         # First touch ever → enable touch UI
@@ -3864,10 +3908,7 @@ Share your run! #HustleTrail #0to1
             self.handle_event(synth)
 
     def draw_touch_ui(self):
-        """Draw semi-transparent virtual buttons over the game"""
-        if not self.is_touch:
-            return
-
+        """Draw semi-transparent virtual buttons over the game (always visible)"""
         self.touch_buttons = self.get_touch_buttons()
 
         # Create a transparent surface for button backgrounds
@@ -3903,24 +3944,26 @@ Share your run! #HustleTrail #0to1
 async def main():
     game = Game()
     running = True
-    
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type in (pygame.FINGERDOWN, pygame.FINGERUP, pygame.FINGERMOTION):
                 game.handle_touch_event(event)
+            elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+                # Treat mouse clicks as touch events (pygbag maps touch→mouse on some devices)
+                game.handle_mouse_as_touch(event)
             else:
                 game.handle_event(event)
 
         game.update()
         game.draw()
-        if game.is_touch:
-            game.draw_touch_ui()
+        game.draw_touch_ui()  # Always draw touch buttons (visible on any device)
         pygame.display.flip()
         clock.tick(60)
         await asyncio.sleep(0)
-    
+
     pygame.quit()
 
 asyncio.run(main())

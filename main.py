@@ -3942,26 +3942,51 @@ Share your run! #HustleTrail #0to1
 # ══════════════════════════════════════════════════════════════════════
 
 async def main():
-    game = Game()
+    try:
+        game = Game()
+    except Exception as e:
+        # Show init error on screen so we can debug on mobile
+        screen.fill(RED)
+        screen.blit(font.render("INIT ERROR:", True, WHITE), (10, 10))
+        screen.blit(small_font.render(str(e)[:80], True, WHITE), (10, 40))
+        pygame.display.flip()
+        while True:
+            await asyncio.sleep(1)
+        return
+
     running = True
 
     while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type in (pygame.FINGERDOWN, pygame.FINGERUP, pygame.FINGERMOTION):
-                game.handle_touch_event(event)
-            elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
-                # Treat mouse clicks as touch events (pygbag maps touch→mouse on some devices)
-                game.handle_mouse_as_touch(event)
-            else:
-                game.handle_event(event)
+        try:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type in (pygame.FINGERDOWN, pygame.FINGERUP, pygame.FINGERMOTION):
+                    game.handle_touch_event(event)
+                elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+                    game.handle_mouse_as_touch(event)
+                else:
+                    game.handle_event(event)
 
-        game.update()
-        game.draw()
-        game.draw_touch_ui()  # Always draw touch buttons (visible on any device)
-        pygame.display.flip()
-        clock.tick(60)
+            game.update()
+            game.draw()
+            game.draw_touch_ui()
+            pygame.display.flip()
+            clock.tick(60)
+        except Exception as e:
+            # Show runtime error on screen
+            screen.fill(RED)
+            screen.blit(font.render("RUNTIME ERROR:", True, WHITE), (10, 10))
+            err_lines = str(e)[:160]
+            screen.blit(small_font.render(err_lines[:80], True, WHITE), (10, 40))
+            if len(err_lines) > 80:
+                screen.blit(small_font.render(err_lines[80:], True, WHITE), (10, 60))
+            screen.blit(small_font.render(f"State: {game.state}", True, YELLOW), (10, 90))
+            pygame.display.flip()
+            while True:
+                await asyncio.sleep(1)
+            return
+
         await asyncio.sleep(0)
 
     pygame.quit()

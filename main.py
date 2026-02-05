@@ -21,10 +21,24 @@ import sys
 import math
 import json
 import os
+import re
+import hashlib
+import hmac
 import asyncio
 
 # Save file path
 SAVE_FILE = os.path.join(os.path.dirname(__file__), "hustle_save.json")
+
+# ── Security helpers ──
+_SAVE_KEY = b"hustle-trail-2026-integrity"
+
+def sanitize_input(text, max_len=50):
+    """Strip control chars and non-printable characters from user input"""
+    return re.sub(r'[^\w\s\.\,\!\?\-\'\"\:\;\(\)\@\#\$\%\&\+\/]', '', text)[:max_len]
+
+def _save_hash(data_str):
+    """HMAC integrity hash for save file tamper detection"""
+    return hmac.new(_SAVE_KEY, data_str.encode('utf-8'), hashlib.sha256).hexdigest()[:16]
 
 # Init
 pygame.init()
@@ -39,6 +53,7 @@ big_font = pygame.font.SysFont('arial', 42, bold=True)
 
 # Generate retro sound effects
 def generate_sound(frequency, duration, volume=0.3, wave_type='square'):
+    duration = min(duration, 5.0)
     sample_rate = 22050
     n_samples = int(sample_rate * duration)
     buf = bytearray(n_samples * 2)
@@ -114,9 +129,9 @@ QUESTIONS_FILE = os.path.join(os.path.dirname(__file__), "questions.json")
 def load_questions():
     try:
         if os.path.exists(QUESTIONS_FILE):
-            with open(QUESTIONS_FILE, 'r') as f:
+            with open(QUESTIONS_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-    except:
+    except (json.JSONDecodeError, IOError, ValueError):
         pass
     return [
         {
@@ -1508,27 +1523,41 @@ class Game:
             "games_played": getattr(self, 'games_played', 0) + 1,
         }
         try:
-            with open(SAVE_FILE, 'w') as f:
+            data_str = json.dumps(save_data, sort_keys=True)
+            save_data["_hash"] = _save_hash(data_str)
+            with open(SAVE_FILE, 'w', encoding='utf-8') as f:
                 json.dump(save_data, f, indent=2)
-        except:
+        except (IOError, TypeError):
             pass
     
     def load_profile(self):
         try:
             if os.path.exists(SAVE_FILE):
-                with open(SAVE_FILE, 'r') as f:
-                    data = json.load(f)
-                self.company_name = data.get("company_name", "")
-                self.problem = data.get("problem", "")
-                self.solution = data.get("solution", "")
-                self.warm_intro = data.get("warm_intro", False)
-                self.elite_college = data.get("elite_college", False)
-                self.games_played = data.get("games_played", 0)
+                with open(SAVE_FILE, 'r', encoding='utf-8') as f:
+                    raw = f.read()
+                data = json.loads(raw)
+                # Verify integrity hash if present
+                stored_hash = data.pop("_hash", None)
+                if stored_hash is not None:
+                    check_str = json.dumps(data, sort_keys=True)
+                    if stored_hash != _save_hash(check_str):
+                        # Tampered save — reset
+                        self.has_saved_profile = False
+                        self.games_played = 0
+                        return
+                # Type-safe casting
+                self.company_name = str(data.get("company_name", ""))[:50]
+                self.problem = str(data.get("problem", ""))[:100]
+                self.solution = str(data.get("solution", ""))[:100]
+                self.warm_intro = bool(data.get("warm_intro", False))
+                self.elite_college = bool(data.get("elite_college", False))
+                self.games_played = int(data.get("games_played", 0))
+                self.high_score = int(data.get("high_score", 0))
                 self.has_saved_profile = bool(self.company_name)
             else:
                 self.has_saved_profile = False
                 self.games_played = 0
-        except:
+        except (json.JSONDecodeError, IOError, ValueError, TypeError):
             self.has_saved_profile = False
             self.games_played = 0
     
@@ -1538,7 +1567,7 @@ class Game:
                 os.remove(SAVE_FILE)
             self.has_saved_profile = False
             self.company_name = ""
-        except:
+        except (IOError, OSError):
             pass
 
     def bootstrap_ending(self):
@@ -2991,6 +3020,11 @@ Share your run! #HustleTrail #0to1
     # ══════════════════════════════════════════════════════════════════
 
     def update(self):
+        # Runtime bounds clamp (anti-cheat)
+        self.runway = max(0, min(100, self.runway))
+        self.equity = max(0, min(100, self.equity))
+        self.traction = max(0, self.traction)
+
         # Lowrider wagon animation (runs in all states)
         self.wheel_angle += 0.15
         self.bounce_time += 1.0 / 60.0
@@ -3474,13 +3508,13 @@ Share your run! #HustleTrail #0to1
                     mobile_defaults = ["Disrupt.ai", "Everything is broken", "AI fixes it (somehow)"]
                     if self.onboarding_step == 0:
                         fallback = mobile_defaults[0] if self.is_touch else "Unnamed Startup"
-                        self.company_name = self.input_text.strip() or fallback
+                        self.company_name = sanitize_input(self.input_text.strip() or fallback, 50)
                     elif self.onboarding_step == 1:
                         fallback = mobile_defaults[1] if self.is_touch else "Everything is broken"
-                        self.problem = self.input_text.strip() or fallback
+                        self.problem = sanitize_input(self.input_text.strip() or fallback, 100)
                     elif self.onboarding_step == 2:
                         fallback = mobile_defaults[2] if self.is_touch else "AI-powered solution"
-                        self.solution = self.input_text.strip() or fallback
+                        self.solution = sanitize_input(self.input_text.strip() or fallback, 100)
                     self.input_text = ""
                     self.onboarding_step += 1
                     if self.onboarding_step >= 3:

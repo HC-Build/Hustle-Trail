@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+build/
+hustle_save.json
+.claude/
+.venv/
+_archive/

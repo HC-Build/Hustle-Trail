@@ -62,7 +62,7 @@ async def custom_site():
     import embed
 
 
-    platform.document.body.style.background = "#000000"
+    platform.document.body.style.background = "#7f7f7f"
 
     import pygame
 
@@ -250,6 +250,7 @@ config = {
 
     <title>oregon.trail</title>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://pygame-web.github.io; style-src 'self' 'unsafe-inline'; connect-src 'self' https://pygame-web.github.io; img-src 'self' data:; frame-src https://pygame-web.github.io;">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="viewport" content="height=device-height, initial-scale=1.0">
@@ -400,8 +401,8 @@ frameborder="1"
                 webkitallowfullscreen="true"
                 msallowfullscreen="true"
                 mozallowfullscreen="true"
-                sandbox="allow-same-origin allow-top-navigation allow-scripts allow-pointer-lock"
-                allow="autoplay; fullscreen *; geolocation; microphone; camera; midi; monetization; xr-spatial-tracking; gamepad; gyroscope; accelerometer; xr; cross-origin-isolated"
+                sandbox="allow-scripts allow-same-origin"
+                allow="autoplay; fullscreen"
                 src="https://pygame-web.github.io/archives/0.9/empty.html"
                 scrolling="yes">
             </iframe>

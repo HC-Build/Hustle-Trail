@@ -3685,6 +3685,11 @@ Share your run! #HustleTrail #0to1
                 hit_action = btn["action"]
                 break
 
+        # Mobile safety: any tap on the title starts the game even if scaling offsets the button hitbox
+        if event.type == pygame.MOUSEBUTTONDOWN and self.state == 0 and not hit_action:
+            self._execute_touch_action("space")
+            return
+
         self.touch_left = False
         self.touch_right = False
         self.touch_up = False
@@ -3731,6 +3736,11 @@ Share your run! #HustleTrail #0to1
             if btn["rect"].collidepoint(tx, ty):
                 hit_action = btn["action"]
                 break
+
+        # Mobile safety: any tap on the title starts the game even if scaling offsets the button hitbox
+        if event.type == pygame.FINGERDOWN and self.state == 0 and not hit_action:
+            self._execute_touch_action("space")
+            return
 
         if event.type == pygame.FINGERDOWN:
             # Clear directional flags first

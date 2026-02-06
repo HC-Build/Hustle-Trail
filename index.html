@@ -298,7 +298,6 @@ config = {
             bottom: 0;
             left: 0;
             right: 0;
-            touch-action: none;
         }
 
         body {
@@ -432,6 +431,16 @@ frameborder="1"
         info.hidden = debug_hidden
         box.hidden =  debug_hidden
 
+        // Force UME on any click/touch
+        function forceUME() {
+            if (window.MM && !window.MM.UME) {
+                window.MM.UME = true;
+                console.log("UME forced by click/touch");
+            }
+        }
+        document.addEventListener('click', forceUME, {once: false, passive: true});
+        document.addEventListener('touchstart', forceUME, {once: false, passive: true});
+        document.addEventListener('touchend', forceUME, {once: false, passive: true});
     }
 
     function custom_prerun(){

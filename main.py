@@ -3854,47 +3854,49 @@ Share your run! #HustleTrail #0to1
                                  "label": str(i + 1), "action": str(i + 1), "color": YELLOW})
 
         elif self.state == 3:
-            # Hunt: d-pad + fire + exit
-            cx, cy = 110, BOT - 30  # d-pad center
-            ds = 70  # d-pad button size (bigger for mobile)
-            btns.append({"rect": pygame.Rect(cx - ds//2, cy - ds - 6, ds, ds),
+            # Hunt: d-pad + fire + exit (large buttons for mobile)
+            cx, cy = 130, BOT - 50  # d-pad center
+            ds = 100  # d-pad button size (extra large for mobile)
+            btns.append({"rect": pygame.Rect(cx - ds//2, cy - ds - 8, ds, ds),
                          "label": "^", "action": "up", "color": CYAN})
-            btns.append({"rect": pygame.Rect(cx - ds - 6, cy, ds, ds),
+            btns.append({"rect": pygame.Rect(cx - ds - 8, cy, ds, ds),
                          "label": "<", "action": "left", "color": CYAN})
-            btns.append({"rect": pygame.Rect(cx + 6, cy, ds, ds),
+            btns.append({"rect": pygame.Rect(cx + 8, cy, ds, ds),
                          "label": ">", "action": "right", "color": CYAN})
-            btns.append({"rect": pygame.Rect(cx - ds//2, cy + ds + 6, ds, ds),
+            btns.append({"rect": pygame.Rect(cx - ds//2, cy + ds + 8, ds, ds),
                          "label": "v", "action": "down", "color": CYAN})
-            btns.append({"rect": pygame.Rect(WIDTH - BW - PAD, BOT, BW, BH),
+            btns.append({"rect": pygame.Rect(WIDTH - 140, BOT - 20, 130, 90),
                          "label": "FIRE", "action": "space", "color": RED})
             btns.append({"rect": pygame.Rect(WIDTH - 100, PAD, 90, 45),
                          "label": "EXIT", "action": "escape", "color": GRAY})
 
         elif self.state == 11:
-            # Cycle arcade
+            # Cycle arcade (large buttons for mobile)
             if self.bonus_type == 'frogger':
                 # Frogger: full d-pad
-                cx, cy = 110, BOT - 30
-                ds = 70
-                btns.append({"rect": pygame.Rect(cx - ds//2, cy - ds - 6, ds, ds),
+                cx, cy = 130, BOT - 50
+                ds = 100  # extra large for mobile
+                btns.append({"rect": pygame.Rect(cx - ds//2, cy - ds - 8, ds, ds),
                              "label": "^", "action": "up", "color": CYAN})
-                btns.append({"rect": pygame.Rect(cx - ds - 6, cy, ds, ds),
+                btns.append({"rect": pygame.Rect(cx - ds - 8, cy, ds, ds),
                              "label": "<", "action": "left", "color": CYAN})
-                btns.append({"rect": pygame.Rect(cx + 6, cy, ds, ds),
+                btns.append({"rect": pygame.Rect(cx + 8, cy, ds, ds),
                              "label": ">", "action": "right", "color": CYAN})
-                btns.append({"rect": pygame.Rect(cx - ds//2, cy + ds + 6, ds, ds),
+                btns.append({"rect": pygame.Rect(cx - ds//2, cy + ds + 8, ds, ds),
                              "label": "v", "action": "down", "color": CYAN})
             else:
-                # Galaga/Boss/Mario: left/right only
-                btns.append({"rect": pygame.Rect(PAD, BOT, BW, BH),
+                # Galaga/Boss/Mario: left/right only (large buttons)
+                LBW = 130  # large button width
+                LBH = 90   # large button height
+                btns.append({"rect": pygame.Rect(PAD, BOT - 10, LBW, LBH),
                              "label": "<", "action": "left", "color": CYAN})
-                btns.append({"rect": pygame.Rect(PAD + BW + PAD, BOT, BW, BH),
+                btns.append({"rect": pygame.Rect(PAD + LBW + PAD, BOT - 10, LBW, LBH),
                              "label": ">", "action": "right", "color": CYAN})
                 if self.bonus_type in ('galaga', 'boss'):
-                    btns.append({"rect": pygame.Rect(WIDTH - BW - PAD, BOT, BW, BH),
+                    btns.append({"rect": pygame.Rect(WIDTH - 140, BOT - 10, 130, LBH),
                                  "label": "FIRE", "action": "space", "color": RED})
                 elif self.bonus_type == 'mario':
-                    btns.append({"rect": pygame.Rect(WIDTH - BW - PAD, BOT, BW, BH),
+                    btns.append({"rect": pygame.Rect(WIDTH - 140, BOT - 10, 130, LBH),
                                  "label": "JUMP", "action": "up", "color": GREEN})
             btns.append({"rect": pygame.Rect(WIDTH - 100, PAD, 90, 45),
                          "label": "EXIT", "action": "escape", "color": GRAY})
